@@ -13,7 +13,10 @@ pub fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    msg!("ello guvna from");
+    msg!("ello guvna");
+
+    let seed = b"percent_tracker";
+    let (pda, _bump) = Pubkey::find_program_address(&[seed], program_id);
 
     Ok(())
 }
