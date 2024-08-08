@@ -1,8 +1,16 @@
-use borsh::BorshDeserialize;
+use accounts_init::{user::{initialize_user_accounts, initialize_user_claim_tracker_account, initialize_user_simple_token_account}, program::initialize_all_program_accounts};
+use instructions::SimpleInstructions;
+use execute::execute;
+
+
 use solana_program::{
-    account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, program_error::ProgramError,
-    pubkey::Pubkey,
+    entrypoint,
+    account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey,
 };
+
+pub mod instructions;
+pub mod execute;
+pub mod accounts_init;
 
 entrypoint!(process_instruction);
 
@@ -15,7 +23,7 @@ pub fn process_instruction(
 
     match instruction {
         SimpleInstructions::InitRequiredProgramAccounts => {
-            
+            initialize_all_program_accounts(program_id);
         }
         SimpleInstructions::InitRequiredUserAccountsAndExecute {
             has_claim_account,
@@ -31,50 +39,4 @@ pub fn process_instruction(
         }
     }
     Ok(())
-}
-
-pub fn execute() {}
-
-pub fn initialize_user_claim_tracker_account() {}
-
-pub fn initialize_user_simple_token_account() {}
-
-pub fn initialize_user_accounts() {
-    initialize_user_claim_tracker_account();
-    initialize_user_simple_token_account();
-}
-
-pub enum SimpleInstructions {
-    InitRequiredProgramAccounts,
-    InitRequiredUserAccountsAndExecute {
-        has_claim_account: bool,
-        has_simple_token_account: bool,
-    },
-    Execute,
-}
-
-#[derive(BorshDeserialize)]
-struct SimpleInstructionsPayload {
-    has_claim_account: bool,
-    has_simple_token_account: bool,
-}
-
-impl SimpleInstructions {
-    pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
-        let (&variant, user_info_raw) = input
-            .split_first()
-            .ok_or(ProgramError::InvalidInstructionData)?;
-
-        let user_info = SimpleInstructionsPayload::try_from_slice(user_info_raw).unwrap();
-
-        Ok(match variant {
-            0 => Self::InitRequiredProgramAccounts,
-            1 => Self::InitRequiredUserAccountsAndExecute {
-                has_claim_account: user_info.has_claim_account,
-                has_simple_token_account: user_info.has_simple_token_account,
-            },
-            2 => Self::Execute,
-            _ => return Err(ProgramError::InvalidInstructionData),
-        })
-    }
 }
