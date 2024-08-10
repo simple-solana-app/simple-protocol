@@ -29,24 +29,24 @@ const hasSimpleTokenAccount = false; // or false
 
 // For InitRequiredProgramAccounts
 const initRequiredProgramAccountsData = new Uint8Array([0,
-    hasClaimAccount,
-    hasSimpleTokenAccount
+    null,
+    null
 ]);
 
-const initRequiredUserAccountsAndExecuteData = new Uint8Array([
-    1, // variant for InitRequiredUserAccountsAndExecute
+const initRequiredUserAccounts = new Uint8Array([
+    1, // variant for InitRequiredUserAccounts
     hasClaimAccount, // has_claim_account
     hasSimpleTokenAccount // has_simple_token_account
 ]);
 
 // For Execute
 const executeData = new Uint8Array([2,
-    hasClaimAccount,
-    hasSimpleTokenAccount
+    null,
+    null
 ]);
 
 // Choose the appropriate instruction data
-const instructionData = initRequiredUserAccountsAndExecuteData; // or initRequiredProgramAccountsData or executeData
+const instructionData = executeData;
 
 // Define the instruction
 const instruction = new TransactionInstruction({

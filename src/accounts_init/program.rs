@@ -61,12 +61,5 @@ fn initialize_percent_tracker_account<'a>(
     account_data.serialize(&mut &mut percent_tracker_pda.data.borrow_mut()[..])
         .map_err(|_| ProgramError::InvalidAccountData)?;
 
-    msg!(
-        "Percent Tracker: {} ({}): {}",
-        percent_tracker_pda.key,
-        percent_tracker_pda.owner,
-        account_data.increment.to_string().as_str()
-    );
-
     Ok(())
 }
