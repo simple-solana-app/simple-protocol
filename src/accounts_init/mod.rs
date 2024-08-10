@@ -1,9 +1,9 @@
-use borsh::{BorshSerialize, BorshDeserialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 
 pub mod program;
 pub mod user;
 
 #[derive(BorshSerialize, BorshDeserialize)]
 pub struct Tracker {
-    increment: u8,
+    pub increment: u8,
 }
