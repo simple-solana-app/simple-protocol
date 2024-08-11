@@ -29,7 +29,11 @@ pub fn process_instruction<'a>(
     let simple = next_account_info(&mut account_info_iter)?;
     let percent_tracker_pda = next_account_info(&mut account_info_iter)?;
     let wsol_balance_pda = next_account_info(&mut account_info_iter)?;
+    let transfer_signer_pda = next_account_info(&mut account_info_iter)?;
+    let program_simple_token_ass_account = next_account_info(&mut account_info_iter)?;
     let system_program = next_account_info(&mut account_info_iter)?;
+    let token_program = next_account_info(&mut account_info_iter)?;
+    let simple_token = next_account_info(&mut account_info_iter)?;
 
     let instruction = SimpleInstructions::unpack(instruction_data)?;
 
@@ -40,7 +44,11 @@ pub fn process_instruction<'a>(
                 simple,
                 percent_tracker_pda,
                 wsol_balance_pda,
+                transfer_signer_pda,
+                program_simple_token_ass_account,
                 system_program,
+                token_program,
+                simple_token,
             );
         }
         SimpleInstructions::InitRequiredUserAccountsAndExecute {
@@ -50,10 +58,18 @@ pub fn process_instruction<'a>(
             (false, true) => initialize_user_claim_tracker_account(),
             (true, false) => initialize_user_simple_ass_token_account(),
             (false, false) => initialize_user_accounts(),
-            (true, true) => execute(percent_tracker_pda, wsol_balance_pda)?, // won't ever be used by UI
+            (true, true) => execute(
+                percent_tracker_pda,
+                wsol_balance_pda,
+                program_simple_token_ass_account,
+            )?, // won't ever be used by UI
         },
         SimpleInstructions::Execute => {
-            execute(percent_tracker_pda, wsol_balance_pda);
+            execute(
+                percent_tracker_pda,
+                wsol_balance_pda,
+                program_simple_token_ass_account,
+            )?;
         }
     }
     Ok(())
