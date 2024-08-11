@@ -30,7 +30,7 @@ const [wsolSolBalancePDA] = PublicKey.findProgramAddressSync([seedWsolBalance], 
 const seedTransferSigner = Buffer.from('transfer_signer_pda'); // Seed for PDA
 const [transferSignerPDA] = PublicKey.findProgramAddressSync([seedTransferSigner], PROGRAM_ID);
 
-const programSimpleTokenAssAccount = new PublicKey('aQLR781cvYJGrcdhedA1W7XCtBN4HBwwsYYbubCL6wK');
+const programSimpleTokenAssAccount = new PublicKey('aQLR781cvYJGrcdhedA1W7XCtBN4HBwwsYYbubCL6wK'); // might need to be G5ScxD5oeGqDwDftSr6HsvydsycRX4phEEXkiPMsofrJ
 
 // Create a new connection to the cluster
 const connection = new Connection('https://api.devnet.solana.com', 'confirmed');

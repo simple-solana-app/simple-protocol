@@ -45,10 +45,8 @@ pub fn process_instruction<'a>(
                 percent_tracker_pda,
                 wsol_balance_pda,
                 transfer_signer_pda,
-                program_simple_token_ass_account,
                 system_program,
-                token_program,
-                simple_token,
+
             );
         }
         SimpleInstructions::InitRequiredUserAccountsAndExecute {

@@ -10,9 +10,6 @@ use solana_program::{
     system_instruction,
     sysvar::Sysvar,
 };
-use spl_associated_token_account::{
-    get_associated_token_address, instruction::create_associated_token_account_idempotent,
-};
 
 use crate::accounts_init::Tracker;
 
@@ -29,28 +26,26 @@ pub fn initialize_all_program_accounts<'a>(
     percent_tracker_pda: &'a AccountInfo<'a>,
     wsol_balance_pda: &'a AccountInfo<'a>,
     transfer_signer_pda: &'a AccountInfo<'a>,
-    program_simple_token_ass_account: &'a AccountInfo<'a>,
     system_program: &'a AccountInfo<'a>,
-    token_program: &'a AccountInfo<'a>,
-    simple_token: &'a AccountInfo<'a>,
+
 ) {
-    // if let Err(e) =
-    //     initialize_percent_tracker_account(program_id, simple, percent_tracker_pda, system_program)
-    // {
-    //     msg!("Failed to initialize percent tracker account: {:?}", e)
-    // }
+    if let Err(e) =
+        initialize_percent_tracker_account(program_id, simple, percent_tracker_pda, system_program)
+    {
+        msg!("Failed to initialize percent tracker account: {:?}", e)
+    }
 
-    // if let Err(e) =
-    //     initialize_wsol_balance_account(program_id, simple, wsol_balance_pda, system_program)
-    // {
-    //     msg!("Failed to initialize WSOL balance account: {:?}", e)
-    // }
+    if let Err(e) =
+        initialize_wsol_balance_account(program_id, simple, wsol_balance_pda, system_program)
+    {
+        msg!("Failed to initialize WSOL balance account: {:?}", e)
+    }
 
-    // if let Err(e) =
-    //     initialize_transfer_signer_account(program_id, simple, transfer_signer_pda, system_program)
-    // {
-    //     msg!("Failed to initialize Transfer Signer account: {:?}", e)
-    // }
+    if let Err(e) =
+        initialize_transfer_signer_account(program_id, simple, transfer_signer_pda, system_program)
+    {
+        msg!("Failed to initialize Transfer Signer account: {:?}", e)
+    }
 }
 
 fn initialize_percent_tracker_account<'a>(
