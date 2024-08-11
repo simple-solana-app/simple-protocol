@@ -1,4 +1,7 @@
-pub struct TransferSigner {}
+use solana_program::{
+    account_info::AccountInfo, program::invoke_signed, program_error::ProgramError, pubkey::Pubkey,
+    rent::Rent, system_instruction, sysvar::Sysvar,
+};
 
 pub fn initialize_transfer_signer_account<'a>(
     program_id: &Pubkey,
@@ -12,7 +15,6 @@ pub fn initialize_transfer_signer_account<'a>(
 
     let (_transfer_signer_address, bump_seed) = Pubkey::find_program_address(&[seed], program_id);
 
-    // Handle the result of `invoke_signed`
     invoke_signed(
         &system_instruction::create_account(
             simple.key,
