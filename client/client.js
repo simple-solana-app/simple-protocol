@@ -23,8 +23,8 @@ const seedPercentTracker = Buffer.from('percent_tracker_pda'); // Seed for PDA
 const [percentTrackerPDA] = PublicKey.findProgramAddressSync([seedPercentTracker], PROGRAM_ID);
 
 // Define the seed for the PDA and derive the public key
-const seedWsolBalance = Buffer.from('wsol_balance_pda'); // Seed for PDA
-const [wsolSolBalancePDA] = PublicKey.findProgramAddressSync([seedWsolBalance], PROGRAM_ID);
+const seedWsolAmount = Buffer.from('wsol_amount_pda'); // Seed for PDA
+const [wsolSolAmountPDA] = PublicKey.findProgramAddressSync([seedWsolAmount], PROGRAM_ID);
 
 // Define the seed for the PDA and derive the public key
 const seedTransferSigner = Buffer.from('transfer_signer_pda'); // Seed for PDA
@@ -35,44 +35,19 @@ const programSimpleTokenAssAccount = new PublicKey('aQLR781cvYJGrcdhedA1W7XCtBN4
 // Create a new connection to the cluster
 const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
-const hasClaimAccount = false; // or false
-const hasSimpleTokenAccount = false; // or false
-
-// For InitRequiredProgramAccounts
-const initRequiredProgramAccountsData = new Uint8Array([0,
-    null,
-    null
-]);
-
-const initRequiredUserAccounts = new Uint8Array([
-    1, // variant for InitRequiredUserAccounts
-    hasClaimAccount, // has_claim_account
-    hasSimpleTokenAccount // has_simple_token_account
-]);
-
-// For Execute
-const executeProgram = new Uint8Array([2,
-    null,
-    null
-]);
-
-// Choose the appropriate instruction data
-const instructionData = executeProgram;
-
 // Define the instruction
 const instruction = new TransactionInstruction({
     programId: PROGRAM_ID,
     keys: [
         { pubkey: simpleKeypair.publicKey, isSigner: true, isWritable: true }, // Assume payer is the SIMPLE_ACCOUNT
         { pubkey: percentTrackerPDA, isSigner: false, isWritable: true },
-        { pubkey: wsolSolBalancePDA, isSigner: false, isWritable: true },
+        { pubkey: wsolSolAmountPDA, isSigner: false, isWritable: true },
         { pubkey: transferSignerPDA, isSigner: false, isWritable: true },
         { pubkey: programSimpleTokenAssAccount, isSigner: false, isWritable: true },
         { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-        { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
         { pubkey: simpleTokenMint, isSigner: false, isWritable: false },
     ],
-    data: instructionData,
+    data: new Uint8Array([]),
 });
 
 const transaction = new Transaction().add(instruction);

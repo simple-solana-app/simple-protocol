@@ -1,9 +1,8 @@
-use borsh::{BorshDeserialize, BorshSerialize};
+pub mod tracker;
+pub mod percent_tracker;
+pub mod wsol_amount;
+pub mod transfer_signer;
 
-pub mod program;
-pub mod user;
+mod program;
+mod user;
 
-#[derive(BorshSerialize, BorshDeserialize)]
-pub struct Tracker {
-    pub increment: u8,
-}

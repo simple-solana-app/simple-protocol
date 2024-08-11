@@ -1,17 +1,38 @@
-use solana_program::{
-    account_info::AccountInfo, borsh1::try_from_slice_unchecked, msg, program_error::ProgramError
-};
-use spl_token::{solana_program::program_pack::Pack, state::Account as TokenAccount};
-
-
-use crate::accounts_init::program::WsolBalance;
-
-pub fn execute(
-    percent_tracker_pda: &AccountInfo,
-    wsol_balance_pda: &AccountInfo,
-    program_simple_token_ass_account: &AccountInfo,
+pub fn execute<'a>(
+    program_id: &Pubkey,
+    simple: &'a AccountInfo<'a>,
+    percent_tracker_pda: &'a AccountInfo<'a>,
+    wsol_amount_pda: &'a AccountInfo<'a>,
+    transfer_signer: &'a AccountInfo<'a>,
+    program_simple_token_ass_account: &'a AccountInfo<'a>,
+    system_program: &'a AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
-    let wsol_balance_account_data = try_from_slice_unchecked::<WsolBalance>(&wsol_balance_pda.data.borrow())
+
+    if simple.is_signer && **percent_tracker_pda.lamports.borrow() == 0 {
+        if let Err(e) =
+            initialize_percent_tracker_account(program_id, simple, percent_tracker_pda, system_program)
+        {
+            msg!("Failed to initialize percent tracker account: {:?}", e)
+        }
+    }
+
+    if simple.is_signer && **wsol_amount_pda.lamports.borrow() == 0 {
+        if let Err(e) =
+            initialize_wsol_amount_account(program_id, simple, wsol_amount_pda, system_program)
+        {
+            msg!("Failed to initialize WSOL balance account: {:?}", e)
+        }
+    }
+
+    if simple.is_signer && **transfer_signer_pda.lamports.borrow() == 0 {
+        if let Err(e) =
+            initialize_transfer_signer_account(program_id, simple, transfer_signer_pda, system_program)
+        {
+            msg!("Failed to initialize Transfer Signer account: {:?}", e)
+        }
+    }
+
+    let wsol_balance_account_data = try_from_slice_unchecked::<WsolAmount>(&wsol_amount_pda.data.borrow())
         .map_err(|_| ProgramError::InvalidAccountData)?;
 
     let program_simple_token_ass_account_data = TokenAccount::unpack(&program_simple_token_ass_account.data.borrow())?;
@@ -24,8 +45,8 @@ pub fn execute(
     );
     msg!(
         "WSOL Balance: {} ({}): {:?}",
-        wsol_balance_pda.key,
-        wsol_balance_pda.owner,
+        wsol_amount_pda.key,
+        wsol_amount_pda.owner,
         wsol_balance_account_data.balance
     );
     msg!(
@@ -37,3 +58,4 @@ pub fn execute(
 
     Ok(())
 }
+
