@@ -16,8 +16,12 @@ const simpleKeypair = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFil
 const PROGRAM_ID = new PublicKey('24x6XDgxxZgSzuAefWmx7WAppzBfgCSHtxAkDtpALbq1');
 
 // Define the seed for the PDA and derive the public key
-const seed = Buffer.from('percent_tracker_pda'); // Seed for PDA
-const [percentTrackerPDA] = PublicKey.findProgramAddressSync([seed], PROGRAM_ID);
+const seedPercentTracker = Buffer.from('percent_tracker_pda'); // Seed for PDA
+const [percentTrackerPDA] = PublicKey.findProgramAddressSync([seedPercentTracker], PROGRAM_ID);
+
+// Define the seed for the PDA and derive the public key
+const seedWsolBalance = Buffer.from('wsol_balance_pda'); // Seed for PDA
+const [wsolSolBalancePDA] = PublicKey.findProgramAddressSync([seedWsolBalance], PROGRAM_ID);
 
 const SYSTEM_PROGRAM_ID = SystemProgram.programId;
 
@@ -54,9 +58,10 @@ const instruction = new TransactionInstruction({
     keys: [
         { pubkey: simpleKeypair.publicKey, isSigner: true, isWritable: true }, // Assume payer is the SIMPLE_ACCOUNT
         { pubkey: percentTrackerPDA, isSigner: false, isWritable: true },
+        { pubkey: wsolSolBalancePDA, isSigner: false, isWritable: true },
         { pubkey: SYSTEM_PROGRAM_ID, isSigner: false, isWritable: false },
     ],
-    data: instructionData, // serialized instruction data
+    data: instructionData,
 });
 
 const transaction = new Transaction().add(instruction);
