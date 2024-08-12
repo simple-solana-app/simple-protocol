@@ -12,7 +12,7 @@ pub struct WsolAmount {
 pub fn initialize_wsol_amount_account<'a>(
     program_id: &Pubkey,
     simple: &'a AccountInfo<'a>,
-    wsol_balance_pda: &'a AccountInfo<'a>,
+    wsol_amount_pda: &'a AccountInfo<'a>,
     system_program: &'a AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
     let seed = b"wsol_amount_pda";
@@ -26,25 +26,25 @@ pub fn initialize_wsol_amount_account<'a>(
     invoke_signed(
         &system_instruction::create_account(
             simple.key,
-            wsol_balance_pda.key,
+            wsol_amount_pda.key,
             rent_lamports,
             account_len.try_into().unwrap(),
             program_id,
         ),
         &[
             simple.clone(),
-            wsol_balance_pda.clone(),
+            wsol_amount_pda.clone(),
             system_program.clone(),
         ],
         &[&[seed, &[bump_seed]]],
     )?;
 
     // Handle the result of `serialize`
-    let mut account_data = try_from_slice_unchecked::<WsolAmount>(&wsol_balance_pda.data.borrow())
+    let mut account_data = try_from_slice_unchecked::<WsolAmount>(&wsol_amount_pda.data.borrow())
         .map_err(|_| ProgramError::InvalidAccountData)?;
     account_data.amount = 0;
     account_data
-        .serialize(&mut &mut wsol_balance_pda.data.borrow_mut()[..])
+        .serialize(&mut &mut wsol_amount_pda.data.borrow_mut()[..])
         .map_err(|_| ProgramError::InvalidAccountData)?;
     Ok(())
 }

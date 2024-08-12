@@ -8,62 +8,93 @@ const {
     sendAndConfirmTransaction,
     TransactionInstruction,
 } = require('@solana/web3.js');
-const { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } = require('@solana/spl-token');
+const {
+    TOKEN_PROGRAM_ID,
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    getAssociatedTokenAddress,
+    createAssociatedTokenAccountIdempotentInstruction
+} = require('@solana/spl-token');
 
-// Load the payer account (simple) from JSON file
 const simpleKeypair = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFileSync('/home/seb/MY/KEYS/simple.json', 'utf8'))));
 const userKeypair = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFileSync('/home/seb/MY/TEST_KEYS/user.json', 'utf8'))));
 
-// Replace these with your actual program ID
 const PROGRAM_ID = new PublicKey('24x6XDgxxZgSzuAefWmx7WAppzBfgCSHtxAkDtpALbq1');
-
 const simpleTokenMint = new PublicKey('DJZ2QJ9x7S4XLR7fvPouR5nZfRXqw92Y7S2BNueZmmde');
 
-// Define the seed for the PDA and derive the public key
-const seedPercentTracker = Buffer.from('percent_tracker_pda'); // Seed for PDA
+const seedPercentTracker = Buffer.from('percent_tracker_pda');
 const [percentTrackerPDA] = PublicKey.findProgramAddressSync([seedPercentTracker], PROGRAM_ID);
 
-// Define the seed for the PDA and derive the public key
-const seedWsolAmount = Buffer.from('wsol_amount_pda'); // Seed for PDA
+const seedWsolAmount = Buffer.from('wsol_amount_pda');
 const [wsolSolAmountPDA] = PublicKey.findProgramAddressSync([seedWsolAmount], PROGRAM_ID);
 
-// Define the seed for the PDA and derive the public key
-const seedTransferSigner = Buffer.from('transfer_signer_pda'); // Seed for PDA
+const seedTransferSigner = Buffer.from('transfer_signer_pda');
 const [transferSignerPDA] = PublicKey.findProgramAddressSync([seedTransferSigner], PROGRAM_ID);
 
-const seedUserClaimTracker = Buffer.from('user_claim_tracker_pda'); // Seed for PDA
+const seedUserClaimTracker = Buffer.from('user_claim_tracker_pda');
 const [userClaimTrackerPDA] = PublicKey.findProgramAddressSync([seedUserClaimTracker, userKeypair.publicKey.toBuffer()], PROGRAM_ID);
 
-const programSimpleTokenAssAccount = new PublicKey('aQLR781cvYJGrcdhedA1W7XCtBN4HBwwsYYbubCL6wK'); // might need to be G5ScxD5oeGqDwDftSr6HsvydsycRX4phEEXkiPMsofrJ
+const programSimpleTokenAssAccount = new PublicKey('aQLR781cvYJGrcdhedA1W7XCtBN4HBwwsYYbubCL6wK');
 
-// Create a new connection to the cluster
+const raydiumPoolWsolTokenAccount = new PublicKey('EBp3owAovYaG1P9TNKfnqc4wY8FwU8iqTsA4Mprwr3JG');
+const fluxbeamPoolWsolTokenAccount = new PublicKey('9p3pKXRPz2EZZw1Wyv7uwV1MZDRwmnLT3Pv5qEt7zgdq');
+
 const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-
-// Define the instruction
-const instruction = new TransactionInstruction({
-    programId: PROGRAM_ID,
-    keys: [
-        { pubkey: simpleKeypair.publicKey, isSigner: false, isWritable: true },
-        { pubkey: userKeypair.publicKey, isSigner: true, isWritable: true },
-        { pubkey: percentTrackerPDA, isSigner: false, isWritable: true },
-        { pubkey: wsolSolAmountPDA, isSigner: false, isWritable: true },
-        { pubkey: transferSignerPDA, isSigner: false, isWritable: false },
-        { pubkey: userClaimTrackerPDA, isSigner: false, isWritable: true },
-        { pubkey: programSimpleTokenAssAccount, isSigner: false, isWritable: true },
-        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
-        { pubkey: simpleTokenMint, isSigner: false, isWritable: false },
-    ],
-    data: new Uint8Array([]),
-});
-
-const transaction = new Transaction().add(instruction);
 
 (async () => {
     try {
-        // Send and confirm the transaction
-        const signature = await sendAndConfirmTransaction(connection, transaction, [userKeypair]);
-        console.log('Transaction confirmed with signature:', signature);
+        // Compute the ATA address for the user
+        const userSimpleAssTokenAccountPubkey = await getAssociatedTokenAddress(
+            simpleTokenMint,
+            userKeypair.publicKey,
+        );
+
+        // Fetch the ATA account info
+        const associatedTokenAccountInfo = await connection.getAccountInfo(userSimpleAssTokenAccountPubkey);
+
+        if (!associatedTokenAccountInfo) {
+            // ATA doesn't exist, create it
+            const transaction = new Transaction();
+
+            const createATAInstruction = createAssociatedTokenAccountIdempotentInstruction(
+                userKeypair.publicKey,
+                userSimpleAssTokenAccountPubkey,
+                userKeypair.publicKey,
+                simpleTokenMint,
+            );
+
+            transaction.add(createATAInstruction);
+
+            // Send and confirm the transaction
+            const signature = await sendAndConfirmTransaction(connection, transaction, [userKeypair]);
+            console.log('Associated token account created with signature:', signature);
+        }
+
+        // Now that the ATA is guaranteed to exist, include it in the program instruction
+        const instruction = new TransactionInstruction({
+            programId: PROGRAM_ID,
+            keys: [
+                { pubkey: simpleKeypair.publicKey, isSigner: false, isWritable: true },
+                { pubkey: userKeypair.publicKey, isSigner: true, isWritable: true },
+                { pubkey: percentTrackerPDA, isSigner: false, isWritable: true },
+                { pubkey: wsolSolAmountPDA, isSigner: false, isWritable: true },
+                { pubkey: transferSignerPDA, isSigner: false, isWritable: false },
+                { pubkey: userClaimTrackerPDA, isSigner: false, isWritable: true },
+                { pubkey: programSimpleTokenAssAccount, isSigner: false, isWritable: true },
+                { pubkey: userSimpleAssTokenAccountPubkey, isSigner: false, isWritable: true },
+                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+                { pubkey: simpleTokenMint, isSigner: false, isWritable: false },
+                { pubkey: raydiumPoolWsolTokenAccount, isSigner: false, isWritable: false },
+                { pubkey: fluxbeamPoolWsolTokenAccount, isSigner: false, isWritable: false },
+            ],
+            data: new Uint8Array([]), // Your program-specific data goes here
+        });
+
+        const transactionWithInstruction = new Transaction().add(instruction);
+
+        // Send and confirm the transaction with the instruction that includes the ATA
+        const signature = await sendAndConfirmTransaction(connection, transactionWithInstruction, [userKeypair]);
+        console.log('Program transaction confirmed with signature:', signature);
     } catch (error) {
-        console.error('Transaction failed:', error);
+        console.error('Error:', error);
     }
 })();

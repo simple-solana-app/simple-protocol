@@ -5,6 +5,7 @@ use solana_program::{
 };
 
 mod accounts_init;
+mod common;
 mod execute;
 use crate::execute::execute;
 
@@ -24,8 +25,11 @@ pub fn process_instruction<'a>(
     let transfer_signer_pda = next_account_info(&mut account_info_iter)?;
     let user_claim_tracker_pda = next_account_info(&mut account_info_iter)?;
     let program_simple_token_ass_account = next_account_info(&mut account_info_iter)?;
+    let user_simple_token_ass_account = next_account_info(&mut account_info_iter)?;
     let system_program = next_account_info(&mut account_info_iter)?;
-    let simple_token = next_account_info(&mut account_info_iter)?;
+    let simple_token_mint_account = next_account_info(&mut account_info_iter)?;
+    let raydium_pool_wsol_token_account = next_account_info(&mut account_info_iter)?;
+    let fluxbeam_pool_wsol_token_account = next_account_info(&mut account_info_iter)?;
 
     execute(
         program_id,
@@ -36,7 +40,11 @@ pub fn process_instruction<'a>(
         transfer_signer_pda,
         user_claim_tracker_pda,
         program_simple_token_ass_account,
+        user_simple_token_ass_account,
         system_program,
+        simple_token_mint_account,
+        raydium_pool_wsol_token_account,
+        fluxbeam_pool_wsol_token_account,
     )?;
 
     Ok(())
