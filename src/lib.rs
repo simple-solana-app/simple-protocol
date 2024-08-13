@@ -29,7 +29,8 @@ pub fn process_instruction<'a>(
     let system_program = next_account_info(&mut account_info_iter)?;
     let simple_token_mint_account = next_account_info(&mut account_info_iter)?;
     let raydium_pool_wsol_token_account = next_account_info(&mut account_info_iter)?;
-    let fluxbeam_pool_wsol_token_account = next_account_info(&mut account_info_iter)?;
+    let raydium_pool_lp_token_mint_account = next_account_info(&mut account_info_iter)?;
+    let user_raydium_pool_lp_ass_token_account = next_account_info(&mut account_info_iter)?;
 
     execute(
         program_id,
@@ -44,7 +45,8 @@ pub fn process_instruction<'a>(
         system_program,
         simple_token_mint_account,
         raydium_pool_wsol_token_account,
-        fluxbeam_pool_wsol_token_account,
+        raydium_pool_lp_token_mint_account,
+        user_raydium_pool_lp_ass_token_account,
     )?;
 
     Ok(())
