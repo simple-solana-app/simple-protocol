@@ -7,6 +7,7 @@ use solana_program::{
 mod accounts_init;
 mod common;
 mod execute;
+mod simple_errors;
 use crate::execute::execute;
 
 solana_program::entrypoint!(process_instruction);

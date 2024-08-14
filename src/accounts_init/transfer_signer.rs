@@ -6,7 +6,7 @@ use solana_program::{
 pub fn initialize_transfer_signer_account<'a>(
     program_id: &Pubkey,
     simple: &'a AccountInfo<'a>,
-    tranfer_signer_pda: &'a AccountInfo<'a>,
+    transfer_signer_pda: &'a AccountInfo<'a>,
     system_program: &'a AccountInfo<'a>,
 ) -> Result<(), ProgramError> {
     let seed = b"transfer_signer_pda";
@@ -18,14 +18,14 @@ pub fn initialize_transfer_signer_account<'a>(
     invoke_signed(
         &system_instruction::create_account(
             simple.key,
-            tranfer_signer_pda.key,
+            transfer_signer_pda.key,
             rent_lamports,
             0,
             program_id,
         ),
         &[
             simple.clone(),
-            tranfer_signer_pda.clone(),
+            transfer_signer_pda.clone(),
             system_program.clone(),
         ],
         &[&[seed, &[bump_seed]]],

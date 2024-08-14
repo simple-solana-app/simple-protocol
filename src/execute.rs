@@ -17,7 +17,11 @@ use crate::{
         user_claim_tracker::initialize_user_claim_tracker_account,
         wsol_amount::{initialize_wsol_amount_account, WsolAmount},
     },
-    common::{RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT_PUBKEY, SIMPLE_MINT, SIMPLE_PUBKEY},
+    common::{
+        PROGRAM_SIMPLE_ASS_TOKEN_ACCOUNT_INITIAL_AMOUNT, RAYDIUM_LP_MINT,
+        RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT_PUBKEY, SIMPLE_MINT, SIMPLE_PUBKEY,
+    },
+    simple_errors::SimpleProtocolErrors,
 };
 
 #[allow(clippy::too_many_arguments)]
@@ -94,36 +98,41 @@ pub fn execute<'a>(
     if user.is_signer
         && **user_simple_token_ass_account.lamports.borrow() != 0
         && user_simple_token_ass_account.key == &user_simple_ata
-        && simple_token_mint_account.key.to_string().as_str() == SIMPLE_MINT
         && raydium_pool_wsol_token_account.key.to_string().as_str()
             == RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT_PUBKEY
         && user_raydium_pool_lp_ass_token_account.key == &user_raydium_pool_lp_ata
+        && simple_token_mint_account.key.to_string().as_str() == SIMPLE_MINT
+        && raydium_pool_lp_token_mint_account.key.to_string().as_str() == RAYDIUM_LP_MINT
     {
+        let program_simple_token_ass_account_amount =
+            TokenAccount::unpack(&program_simple_token_ass_account.data.borrow())
+                .unwrap()
+                .amount;
+
+        let mut percent_tracker_account_data =
+            try_from_slice_unchecked::<Tracker>(&percent_tracker_pda.data.borrow())
+                .map_err(|_| ProgramError::InvalidAccountData)?;
+
+        let total_drainable_simple = program_simple_token_ass_account_amount as f64
+            * percent_tracker_account_data.increment as f64
+            / 100.0;
+
+        if (program_simple_token_ass_account_amount as f64)
+            < (PROGRAM_SIMPLE_ASS_TOKEN_ACCOUNT_INITIAL_AMOUNT - total_drainable_simple)
+        {
+            msg!("Max drainable simple has already been claimed for this round");
+            return Err(SimpleProtocolErrors::MaxSimpleDrained.into());
+        }
+
         let raydium_pool_wsol_token_account_amount =
             TokenAccount::unpack(&raydium_pool_wsol_token_account.data.borrow())
                 .unwrap()
                 .amount;
 
-        msg!(
-            "Raydium WSOL {} ({}) amount: {}",
-            raydium_pool_wsol_token_account.key,
-            raydium_pool_wsol_token_account.owner,
-            raydium_pool_wsol_token_account_amount / LAMPORTS_PER_SOL
-        );
-
-        let total_wsol_in_pools: u64 = raydium_pool_wsol_token_account_amount;
-
-        msg!(
-            "Total WSOL in pools: {}",
-            total_wsol_in_pools / LAMPORTS_PER_SOL
-        );
+        let total_wsol_in_pools = raydium_pool_wsol_token_account_amount; // future simple native pool impl?
 
         let mut wsol_amount_account_data =
             try_from_slice_unchecked::<WsolAmount>(&wsol_amount_pda.data.borrow())
-                .map_err(|_| ProgramError::InvalidAccountData)?;
-
-        let mut percent_tracker_account_data =
-            try_from_slice_unchecked::<Tracker>(&percent_tracker_pda.data.borrow())
                 .map_err(|_| ProgramError::InvalidAccountData)?;
 
         if total_wsol_in_pools >= wsol_amount_account_data.amount + 50_000_000_000 {
@@ -138,68 +147,60 @@ pub fn execute<'a>(
                 .map_err(|_| ProgramError::InvalidAccountData)?;
         }
 
-        let program_simple_token_ass_account_amount =
-            TokenAccount::unpack(&program_simple_token_ass_account.data.borrow())
-                .unwrap()
-                .amount;
-
-        let total_claimable_simple = program_simple_token_ass_account_amount as f64
-            * percent_tracker_account_data.increment as f64
-            / 100.0;
-
         let mut user_claim_tracker_account_data =
             try_from_slice_unchecked::<Tracker>(&user_claim_tracker_pda.data.borrow())
                 .map_err(|_| ProgramError::InvalidAccountData)?;
 
-        if user_claim_tracker_account_data.increment != percent_tracker_account_data.increment {
+        if user_claim_tracker_account_data.increment < percent_tracker_account_data.increment {
             let user_raydium_pool_lp_ass_token_account_amount =
                 TokenAccount::unpack(&user_raydium_pool_lp_ass_token_account.data.borrow())
                     .unwrap()
                     .amount;
-
-            let user_claim_percent =
-                percent_tracker_account_data.increment - user_claim_tracker_account_data.increment;
-
-            msg!("user can claim their share of {}%", user_claim_percent);
-
-            msg!(
-                "user Raydium Pool LP account {} ({}) amount: {}",
-                user_raydium_pool_lp_ass_token_account.key,
-                user_raydium_pool_lp_ass_token_account.owner,
-                user_raydium_pool_lp_ass_token_account_amount / LAMPORTS_PER_SOL
-            );
 
             let raydium_pool_lp_token_mint_supply =
                 Mint::unpack(&raydium_pool_lp_token_mint_account.data.borrow())
                     .map_err(|_| ProgramError::InvalidAccountData)?
                     .supply;
 
-            msg!(
-                "Raydium Pool LP mint {} ({}) supply: {}",
-                raydium_pool_lp_token_mint_account.key,
-                raydium_pool_lp_token_mint_account.owner,
-                raydium_pool_lp_token_mint_supply / LAMPORTS_PER_SOL
-            );
-
             let user_raydium_lp_ratio = user_raydium_pool_lp_ass_token_account_amount as f64
                 / raydium_pool_lp_token_mint_supply as f64;
-            let user_share = total_claimable_simple * user_raydium_lp_ratio;
 
-            msg!("user Pool LP mint ratio: {}", user_raydium_lp_ratio);
+            let user_claim_percent =
+                percent_tracker_account_data.increment - user_claim_tracker_account_data.increment;
+
+            let user_share =
+                total_drainable_simple * user_claim_percent as f64 / 100.0 * user_raydium_lp_ratio;
 
             msg!(
-                "user's share is {} aka user can claim {} of {}%",
-                user_share / LAMPORTS_PER_SOL as f64,
-                user_raydium_lp_ratio,
+                "user claim incr. start: {}",
+                user_claim_tracker_account_data.increment
+            );
+            msg!(
+                "percent tracker: {}",
                 percent_tracker_account_data.increment
             );
-
-            msg!("user's share: {}", user_share / LAMPORTS_PER_SOL as f64);
+            msg!("user's claim percent: {}%", user_claim_percent);
+            msg!(
+                "max amount of simple claimable by user: {} simple",
+                user_claim_percent as f64 / 100.0 * total_drainable_simple
+                    / LAMPORTS_PER_SOL as f64
+            );
+            msg!("user's LP ratio: {}", user_raydium_lp_ratio);
+            msg!(
+                "user's actual share: {} simple",
+                user_share / LAMPORTS_PER_SOL as f64
+            );
 
             user_claim_tracker_account_data.increment = percent_tracker_account_data.increment;
             user_claim_tracker_account_data
                 .serialize(&mut &mut user_claim_tracker_pda.data.borrow_mut()[..])
                 .map_err(|_| ProgramError::InvalidAccountData)?;
+
+            msg!(
+                "user claim incr. end {}",
+                user_claim_tracker_account_data.increment
+            )
+
             //transfer
         }
 
@@ -221,10 +222,6 @@ pub fn execute<'a>(
             program_simple_token_ass_account.key,
             program_simple_token_ass_account.owner,
             program_simple_token_ass_account_amount / LAMPORTS_PER_SOL
-        );
-        msg!(
-            "Total claimable simple: {}",
-            total_claimable_simple / LAMPORTS_PER_SOL as f64
         );
         msg!(
             "User's Claim Tracker {} ({}) increment: {}",
