@@ -1,14 +1,3 @@
-use borsh::BorshSerialize;
-use solana_program::{
-    account_info::AccountInfo, borsh1::try_from_slice_unchecked, msg,
-    native_token::LAMPORTS_PER_SOL, program_error::ProgramError, pubkey::Pubkey,
-};
-use spl_associated_token_account::get_associated_token_address;
-use spl_token::{
-    solana_program::program_pack::Pack,
-    state::{Account as TokenAccount, Mint},
-};
-
 use crate::{
     accounts_init::{
         percent_tracker::initialize_percent_tracker_account,
@@ -22,95 +11,125 @@ use crate::{
         RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT_PUBKEY, SIMPLE_MINT, SIMPLE_PUBKEY,
     },
     simple_errors::SimpleProtocolErrors,
+    transfer_simple::transfer_simple,
+};
+use borsh::BorshSerialize;
+use solana_program::{
+    account_info::AccountInfo, borsh1::try_from_slice_unchecked, msg,
+    native_token::LAMPORTS_PER_SOL, program_error::ProgramError, pubkey::Pubkey,
+};
+use spl_associated_token_account::get_associated_token_address;
+use spl_token::{
+    solana_program::program_pack::Pack,
+    state::{Account as TokenAccount, Mint},
 };
 
-#[allow(clippy::too_many_arguments)]
-pub fn execute<'a>(
-    program_id: &Pubkey,
-    simple: &'a AccountInfo<'a>,
-    user: &'a AccountInfo<'a>,
-    percent_tracker_pda: &'a AccountInfo<'a>,
-    wsol_amount_pda: &'a AccountInfo<'a>,
-    transfer_signer_pda: &'a AccountInfo<'a>,
-    user_claim_tracker_pda: &'a AccountInfo<'a>,
-    program_simple_token_ass_account: &'a AccountInfo<'a>,
-    user_simple_token_ass_account: &'a AccountInfo<'a>,
-    system_program: &'a AccountInfo<'a>,
-    simple_token_mint_account: &'a AccountInfo<'a>,
-    raydium_pool_wsol_token_account: &'a AccountInfo<'a>,
-    raydium_pool_lp_token_mint_account: &'a AccountInfo<'a>,
-    user_raydium_pool_lp_ass_token_account: &'a AccountInfo<'a>,
-) -> Result<(), ProgramError> {
-    if simple.is_signer
-        && **percent_tracker_pda.lamports.borrow() == 0
-        && simple.key.to_string().as_str() == SIMPLE_PUBKEY
+pub struct ExecuteArgs<'a> {
+    pub simple: &'a AccountInfo<'a>,
+
+    pub user: &'a AccountInfo<'a>,
+    pub user_claim_tracker_pda: &'a AccountInfo<'a>,
+    pub user_raydium_pool_lp_ass_token_account: &'a AccountInfo<'a>,
+    pub user_simple_token_ass_account: &'a AccountInfo<'a>,
+
+    pub percent_tracker_pda: &'a AccountInfo<'a>,
+    pub wsol_amount_pda: &'a AccountInfo<'a>,
+    pub transfer_signer_pda: &'a AccountInfo<'a>,
+    pub program_simple_token_ass_account: &'a AccountInfo<'a>,
+
+    pub simple_token_mint_account: &'a AccountInfo<'a>,
+    pub raydium_pool_wsol_token_account: &'a AccountInfo<'a>,
+    pub raydium_pool_lp_token_mint_account: &'a AccountInfo<'a>,
+
+    pub system_program: &'a AccountInfo<'a>,
+    pub token_program: &'a AccountInfo<'a>,
+    pub associated_token_program: &'a AccountInfo<'a>,
+}
+
+pub fn execute(program_id: &Pubkey, args: ExecuteArgs) -> Result<(), ProgramError> {
+    if args.simple.is_signer
+        && **args.percent_tracker_pda.lamports.borrow() == 0
+        && args.simple.key.to_string().as_str() == SIMPLE_PUBKEY
     {
         if let Err(e) = initialize_percent_tracker_account(
             program_id,
-            simple,
-            percent_tracker_pda,
-            system_program,
+            args.simple,
+            args.percent_tracker_pda,
+            args.system_program,
         ) {
             msg!("Failed to initialize percent tracker account: {:?}", e)
         }
     }
 
-    if simple.is_signer
-        && **wsol_amount_pda.lamports.borrow() == 0
-        && simple.key.to_string().as_str() == SIMPLE_PUBKEY
+    if args.simple.is_signer
+        && **args.wsol_amount_pda.lamports.borrow() == 0
+        && args.simple.key.to_string().as_str() == SIMPLE_PUBKEY
     {
-        if let Err(e) =
-            initialize_wsol_amount_account(program_id, simple, wsol_amount_pda, system_program)
-        {
+        if let Err(e) = initialize_wsol_amount_account(
+            program_id,
+            args.simple,
+            args.wsol_amount_pda,
+            args.system_program,
+        ) {
             msg!("Failed to initialize WSOL balance account: {:?}", e)
         }
     }
 
-    if simple.is_signer
-        && **transfer_signer_pda.lamports.borrow() == 0
-        && simple.key.to_string().as_str() == SIMPLE_PUBKEY
+    if args.simple.is_signer
+        && **args.transfer_signer_pda.lamports.borrow() == 0
+        && args.simple.key.to_string().as_str() == SIMPLE_PUBKEY
     {
         if let Err(e) = initialize_transfer_signer_account(
             program_id,
-            simple,
-            transfer_signer_pda,
-            system_program,
+            args.simple,
+            args.transfer_signer_pda,
+            args.system_program,
         ) {
             msg!("Failed to initialize Transfer Signer account: {:?}", e)
         }
     }
 
-    if user.is_signer && **user_claim_tracker_pda.lamports.borrow() == 0 {
+    if args.user.is_signer && **args.user_claim_tracker_pda.lamports.borrow() == 0 {
         if let Err(e) = initialize_user_claim_tracker_account(
             program_id,
-            user,
-            user_claim_tracker_pda,
-            system_program,
+            args.user,
+            args.user_claim_tracker_pda,
+            args.system_program,
         ) {
             msg!("Failed to initialize User Claim account: {:?}", e)
         }
     }
 
-    let user_simple_ata = get_associated_token_address(user.key, simple_token_mint_account.key);
+    let user_simple_ata =
+        get_associated_token_address(args.user.key, args.simple_token_mint_account.key);
     let user_raydium_pool_lp_ata =
-        get_associated_token_address(user.key, raydium_pool_lp_token_mint_account.key);
+        get_associated_token_address(args.user.key, args.raydium_pool_lp_token_mint_account.key);
 
-    if user.is_signer
-        && **user_simple_token_ass_account.lamports.borrow() != 0
-        && user_simple_token_ass_account.key == &user_simple_ata
-        && raydium_pool_wsol_token_account.key.to_string().as_str()
+    if args.user.is_signer
+        && **args.user_simple_token_ass_account.lamports.borrow() != 0
+        && args.user_simple_token_ass_account.key == &user_simple_ata
+        && args
+            .raydium_pool_wsol_token_account
+            .key
+            .to_string()
+            .as_str()
             == RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT_PUBKEY
-        && user_raydium_pool_lp_ass_token_account.key == &user_raydium_pool_lp_ata
-        && simple_token_mint_account.key.to_string().as_str() == SIMPLE_MINT
-        && raydium_pool_lp_token_mint_account.key.to_string().as_str() == RAYDIUM_LP_MINT
+        && args.user_raydium_pool_lp_ass_token_account.key == &user_raydium_pool_lp_ata
+        && args.simple_token_mint_account.key.to_string().as_str() == SIMPLE_MINT
+        && args
+            .raydium_pool_lp_token_mint_account
+            .key
+            .to_string()
+            .as_str()
+            == RAYDIUM_LP_MINT
     {
         let program_simple_token_ass_account_amount =
-            TokenAccount::unpack(&program_simple_token_ass_account.data.borrow())
+            TokenAccount::unpack(&args.program_simple_token_ass_account.data.borrow())
                 .unwrap()
                 .amount;
 
         let mut percent_tracker_account_data =
-            try_from_slice_unchecked::<Tracker>(&percent_tracker_pda.data.borrow())
+            try_from_slice_unchecked::<Tracker>(&args.percent_tracker_pda.data.borrow())
                 .map_err(|_| ProgramError::InvalidAccountData)?;
 
         let total_drainable_simple = program_simple_token_ass_account_amount as f64
@@ -125,40 +144,40 @@ pub fn execute<'a>(
         }
 
         let raydium_pool_wsol_token_account_amount =
-            TokenAccount::unpack(&raydium_pool_wsol_token_account.data.borrow())
+            TokenAccount::unpack(&args.raydium_pool_wsol_token_account.data.borrow())
                 .unwrap()
                 .amount;
 
         let total_wsol_in_pools = raydium_pool_wsol_token_account_amount; // future simple native pool impl?
 
         let mut wsol_amount_account_data =
-            try_from_slice_unchecked::<WsolAmount>(&wsol_amount_pda.data.borrow())
+            try_from_slice_unchecked::<WsolAmount>(&args.wsol_amount_pda.data.borrow())
                 .map_err(|_| ProgramError::InvalidAccountData)?;
 
         if total_wsol_in_pools >= wsol_amount_account_data.amount + 50_000_000_000 {
             wsol_amount_account_data.amount = total_wsol_in_pools;
             wsol_amount_account_data
-                .serialize(&mut &mut wsol_amount_pda.data.borrow_mut()[..])
+                .serialize(&mut &mut args.wsol_amount_pda.data.borrow_mut()[..])
                 .map_err(|_| ProgramError::InvalidAccountData)?;
 
             percent_tracker_account_data.increment += 1;
             percent_tracker_account_data
-                .serialize(&mut &mut percent_tracker_pda.data.borrow_mut()[..])
+                .serialize(&mut &mut args.percent_tracker_pda.data.borrow_mut()[..])
                 .map_err(|_| ProgramError::InvalidAccountData)?;
         }
 
         let mut user_claim_tracker_account_data =
-            try_from_slice_unchecked::<Tracker>(&user_claim_tracker_pda.data.borrow())
+            try_from_slice_unchecked::<Tracker>(&args.user_claim_tracker_pda.data.borrow())
                 .map_err(|_| ProgramError::InvalidAccountData)?;
 
         if user_claim_tracker_account_data.increment < percent_tracker_account_data.increment {
             let user_raydium_pool_lp_ass_token_account_amount =
-                TokenAccount::unpack(&user_raydium_pool_lp_ass_token_account.data.borrow())
+                TokenAccount::unpack(&args.user_raydium_pool_lp_ass_token_account.data.borrow())
                     .unwrap()
                     .amount;
 
             let raydium_pool_lp_token_mint_supply =
-                Mint::unpack(&raydium_pool_lp_token_mint_account.data.borrow())
+                Mint::unpack(&args.raydium_pool_lp_token_mint_account.data.borrow())
                     .map_err(|_| ProgramError::InvalidAccountData)?
                     .supply;
 
@@ -187,48 +206,46 @@ pub fn execute<'a>(
             );
             msg!("user's LP ratio: {}", user_raydium_lp_ratio);
             msg!(
-                "user's actual share: {} simple",
-                user_share / LAMPORTS_PER_SOL as f64
+                "user's actual share (not divided by 1B): {} simple",
+                user_share as u64
+            );
+
+            transfer_simple(
+                &[
+                    args.simple_token_mint_account.clone(),
+                    args.program_simple_token_ass_account.clone(),
+                    args.user_simple_token_ass_account.clone(),
+                    args.transfer_signer_pda.clone(),
+                    args.user.clone(),
+                    args.user.clone(),
+                    args.system_program.clone(),
+                    args.token_program.clone(),
+                    args.associated_token_program.clone(),
+                ],
+                user_share as u64,
+                program_id,
+            )?;
+
+            let user_simple_token_ass_account_amount =
+                TokenAccount::unpack(&args.user_simple_token_ass_account.data.borrow())
+                    .unwrap()
+                    .amount;
+
+            msg!(
+                "user simple wallet balance: {} simple",
+                user_simple_token_ass_account_amount
             );
 
             user_claim_tracker_account_data.increment = percent_tracker_account_data.increment;
             user_claim_tracker_account_data
-                .serialize(&mut &mut user_claim_tracker_pda.data.borrow_mut()[..])
+                .serialize(&mut &mut args.user_claim_tracker_pda.data.borrow_mut()[..])
                 .map_err(|_| ProgramError::InvalidAccountData)?;
 
             msg!(
                 "user claim incr. end {}",
                 user_claim_tracker_account_data.increment
             )
-
-            //transfer
         }
-
-        msg!(
-            "WSOL Amount Tracker: {} ({}) amount: {}",
-            wsol_amount_pda.key,
-            wsol_amount_pda.owner,
-            wsol_amount_account_data.amount / LAMPORTS_PER_SOL
-        );
-
-        msg!(
-            "Percent Tracker: {} ({}) increment: {}",
-            percent_tracker_pda.key,
-            percent_tracker_pda.owner,
-            percent_tracker_account_data.increment
-        );
-        msg!(
-            "Program's simple token account: {} ({}) amount: {}",
-            program_simple_token_ass_account.key,
-            program_simple_token_ass_account.owner,
-            program_simple_token_ass_account_amount / LAMPORTS_PER_SOL
-        );
-        msg!(
-            "User's Claim Tracker {} ({}) increment: {}",
-            user_claim_tracker_pda.key,
-            user_claim_tracker_pda.owner,
-            user_claim_tracker_account_data.increment,
-        );
     }
 
     Ok(())
