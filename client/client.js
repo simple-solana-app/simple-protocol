@@ -16,7 +16,7 @@ const {
     ASSOCIATED_TOKEN_PROGRAM_ID
 } = require('@solana/spl-token');
 
-const SIMPLE_PROGRAM_ID = new PublicKey('24x6XDgxxZgSzuAefWmx7WAppzBfgCSHtxAkDtpALbq1');
+const SIMPLE_PROGRAM_ID = new PublicKey('G7f6gkte79YAjgrgGqxERuF39GVzGeFZ3H63dVQd89F3');
 const simple_token_mint = new PublicKey('DJZ2QJ9x7S4XLR7fvPouR5nZfRXqw92Y7S2BNueZmmde');
 const simple_keypair = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFileSync('/home/seb/MY/KEYS/simple.json', 'utf8'))));
 
@@ -39,7 +39,7 @@ const [wsol_sol_amount_pda] = PublicKey.findProgramAddressSync([seed_wsol_amount
 const seed_transfer_signer = Buffer.from('transfer_signer_pda');
 const [transfer_signer_pda] = PublicKey.findProgramAddressSync([seed_transfer_signer], SIMPLE_PROGRAM_ID);
 
-const program_simple_token_ass_account = new PublicKey('G5ScxD5oeGqDwDftSr6HsvydsycRX4phEEXkiPMsofrJ');
+const program_simple_token_ass_account = new PublicKey('2bJRiTW6vG9Mpnkr4sNP6vYaxgs2CqX4hqXaqFGpSwZW');
 
 const raydium_pool_wsol_token_account = new PublicKey('EBp3owAovYaG1P9TNKfnqc4wY8FwU8iqTsA4Mprwr3JG');
 const raydium_lp_token_mint = new PublicKey('Fep9kTWfPCQ6uADqdnLnnvYZ39jH7h1oQZVHdSnU2Nmb');
@@ -89,6 +89,31 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
         }
 
         // Now that the ATA is guaranteed to exist, include it in the program instruction
+        const simple_instruction = new TransactionInstruction({
+            programId: SIMPLE_PROGRAM_ID,
+            keys: [
+                { pubkey: simple_keypair.publicKey, isSigner: true, isWritable: true },
+
+                { pubkey: user_keypair.publicKey, isSigner: false, isWritable: true },
+                { pubkey: user_claim_tracker_pda, isSigner: false, isWritable: true },
+                { pubkey: user_raydium_lp_ass_token_account_pubkey, isSigner: false, isWritable: false },
+                { pubkey: user_simple_ass_token_account_pubkey, isSigner: false, isWritable: true },
+
+                { pubkey: percent_tracker_pda, isSigner: false, isWritable: true },
+                { pubkey: wsol_sol_amount_pda, isSigner: false, isWritable: true },
+                { pubkey: transfer_signer_pda, isSigner: false, isWritable: false },
+                { pubkey: program_simple_token_ass_account, isSigner: false, isWritable: true },
+
+                { pubkey: simple_token_mint, isSigner: false, isWritable: false },
+                { pubkey: raydium_pool_wsol_token_account, isSigner: false, isWritable: false },
+                { pubkey: raydium_lp_token_mint, isSigner: false, isWritable: false },
+
+                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+                { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+                { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+            ],
+            data: new Uint8Array([]),
+        });
         const user_instruction = new TransactionInstruction({
             programId: SIMPLE_PROGRAM_ID,
             keys: [
@@ -142,14 +167,14 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
         });
 
         const compute_budget_ix = ComputeBudgetProgram.setComputeUnitLimit({
-            units: 300000,
+            units: 500000,
         });
         
         const transaction_with_instruction = new Transaction()
             .add(compute_budget_ix)
-            .add(user_instruction);
+            .add(simple_instruction);
         
-        const signature = await sendAndConfirmTransaction(connection, transaction_with_instruction, [user_keypair]);
+        const signature = await sendAndConfirmTransaction(connection, transaction_with_instruction, [simple_keypair]);
 
         console.log('Program transaction confirmed with signature:', signature);
     } catch (error) {
