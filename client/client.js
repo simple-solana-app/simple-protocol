@@ -16,7 +16,7 @@ const {
     ASSOCIATED_TOKEN_PROGRAM_ID
 } = require('@solana/spl-token');
 
-const SIMPLE_PROGRAM_ID = new PublicKey('G7f6gkte79YAjgrgGqxERuF39GVzGeFZ3H63dVQd89F3');
+const SIMPLE_PROGRAM_ID = new PublicKey('B5XRqYVdY1nTWc8hUjd3m1Lta82Tc8RZSVg3nzB8FgLe');
 const simple_token_mint = new PublicKey('DJZ2QJ9x7S4XLR7fvPouR5nZfRXqw92Y7S2BNueZmmde');
 const simple_keypair = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFileSync('/home/seb/MY/KEYS/simple.json', 'utf8'))));
 
@@ -41,8 +41,8 @@ const [transfer_signer_pda] = PublicKey.findProgramAddressSync([seed_transfer_si
 
 const program_simple_token_ass_account = new PublicKey('2bJRiTW6vG9Mpnkr4sNP6vYaxgs2CqX4hqXaqFGpSwZW');
 
-const raydium_pool_wsol_token_account = new PublicKey('EBp3owAovYaG1P9TNKfnqc4wY8FwU8iqTsA4Mprwr3JG');
-const raydium_lp_token_mint = new PublicKey('Fep9kTWfPCQ6uADqdnLnnvYZ39jH7h1oQZVHdSnU2Nmb');
+const simple_pool_wsol_token_account = new PublicKey('EBp3owAovYaG1P9TNKfnqc4wY8FwU8iqTsA4Mprwr3JG');
+const simple_lp_token_mint = new PublicKey('Fep9kTWfPCQ6uADqdnLnnvYZ39jH7h1oQZVHdSnU2Nmb');
 
 const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
@@ -58,12 +58,12 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
             user1_keypair.publicKey,
         );
 
-        const user_raydium_lp_ass_token_account_pubkey = await getAssociatedTokenAddress(
-            raydium_lp_token_mint,
+        const user_simple_lp_ass_token_account_pubkey = await getAssociatedTokenAddress(
+            simple_lp_token_mint,
             user_keypair.publicKey,
         );
-        const user1_raydium_lp_ass_token_account_pubkey = await getAssociatedTokenAddress(
-            raydium_lp_token_mint,
+        const user1_simple_lp_ass_token_account_pubkey = await getAssociatedTokenAddress(
+            simple_lp_token_mint,
             user1_keypair.publicKey,
         );
 
@@ -96,7 +96,7 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
                 { pubkey: user_keypair.publicKey, isSigner: false, isWritable: true },
                 { pubkey: user_claim_tracker_pda, isSigner: false, isWritable: true },
-                { pubkey: user_raydium_lp_ass_token_account_pubkey, isSigner: false, isWritable: false },
+                { pubkey: user_simple_lp_ass_token_account_pubkey, isSigner: false, isWritable: false },
                 { pubkey: user_simple_ass_token_account_pubkey, isSigner: false, isWritable: true },
 
                 { pubkey: percent_tracker_pda, isSigner: false, isWritable: true },
@@ -105,14 +105,14 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
                 { pubkey: program_simple_token_ass_account, isSigner: false, isWritable: true },
 
                 { pubkey: simple_token_mint, isSigner: false, isWritable: false },
-                { pubkey: raydium_pool_wsol_token_account, isSigner: false, isWritable: false },
-                { pubkey: raydium_lp_token_mint, isSigner: false, isWritable: false },
+                { pubkey: simple_pool_wsol_token_account, isSigner: false, isWritable: false },
+                { pubkey: simple_lp_token_mint, isSigner: false, isWritable: false },
 
                 { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
                 { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
                 { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
             ],
-            data: new Uint8Array([]),
+            data: Buffer.from([0]),
         });
         const user_instruction = new TransactionInstruction({
             programId: SIMPLE_PROGRAM_ID,
@@ -121,7 +121,7 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
                 { pubkey: user_keypair.publicKey, isSigner: true, isWritable: true },
                 { pubkey: user_claim_tracker_pda, isSigner: false, isWritable: true },
-                { pubkey: user_raydium_lp_ass_token_account_pubkey, isSigner: false, isWritable: false },
+                { pubkey: user_simple_lp_ass_token_account_pubkey, isSigner: false, isWritable: false },
                 { pubkey: user_simple_ass_token_account_pubkey, isSigner: false, isWritable: true },
 
                 { pubkey: percent_tracker_pda, isSigner: false, isWritable: true },
@@ -130,8 +130,8 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
                 { pubkey: program_simple_token_ass_account, isSigner: false, isWritable: true },
 
                 { pubkey: simple_token_mint, isSigner: false, isWritable: false },
-                { pubkey: raydium_pool_wsol_token_account, isSigner: false, isWritable: false },
-                { pubkey: raydium_lp_token_mint, isSigner: false, isWritable: false },
+                { pubkey: simple_pool_wsol_token_account, isSigner: false, isWritable: false },
+                { pubkey: simple_lp_token_mint, isSigner: false, isWritable: false },
 
                 { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
                 { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
@@ -147,7 +147,7 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
                 { pubkey: user1_keypair.publicKey, isSigner: true, isWritable: true },
                 { pubkey: user1_claim_tracker_pda, isSigner: false, isWritable: true },
-                { pubkey: user1_raydium_lp_ass_token_account_pubkey, isSigner: false, isWritable: false },
+                { pubkey: user1_simple_lp_ass_token_account_pubkey, isSigner: false, isWritable: false },
                 { pubkey: user1_simple_ass_token_account_pubkey, isSigner: false, isWritable: true },
 
                 { pubkey: percent_tracker_pda, isSigner: false, isWritable: true },
@@ -156,8 +156,8 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
                 { pubkey: program_simple_token_ass_account, isSigner: false, isWritable: true },
 
                 { pubkey: simple_token_mint, isSigner: false, isWritable: false },
-                { pubkey: raydium_pool_wsol_token_account, isSigner: false, isWritable: false },
-                { pubkey: raydium_lp_token_mint, isSigner: false, isWritable: false },
+                { pubkey: simple_pool_wsol_token_account, isSigner: false, isWritable: false },
+                { pubkey: simple_lp_token_mint, isSigner: false, isWritable: false },
 
                 { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
                 { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
