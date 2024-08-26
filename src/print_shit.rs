@@ -1,78 +1,23 @@
-use solana_program::msg;
+use solana_program::{account_info::{self, next_account_info, AccountInfo}, borsh1::try_from_slice_unchecked, entrypoint::ProgramResult, msg, program_error::ProgramError};
 
-use crate::Args;
+use crate::accounts_init::{program::wsol_amount::WsolAmount, Tracker};
 
-pub fn print_prog_accounts(args: &Args) {
-    msg!("simple: {} ({})", args.simple.key, args.simple.owner);
-    msg!(
-        "percent_tracker_pda: {} ({})",
-        args.percent_tracker_pda.key,
-        args.percent_tracker_pda.owner
-    );
-    msg!(
-        "wsol_amount_pda: {} ({})",
-        args.wsol_amount_pda.key,
-        args.wsol_amount_pda.owner
-    );
-    msg!(
-        "transfer_signer_pda: {} ({})",
-        args.transfer_signer_pda.key,
-        args.transfer_signer_pda.owner
-    );
-    msg!(
-        "program_simple_token_ass_account: {} ({})",
-        args.program_simple_token_ass_account.key,
-        args.program_simple_token_ass_account.owner
-    );
-    msg!(
-        "simple_pool_wsol_token_account: {} ({})",
-        args.simple_pool_wsol_token_account.key,
-        args.simple_pool_wsol_token_account.owner
-    );
-}
+pub fn print_shit(accounts: &[AccountInfo]) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+    let simple = next_account_info(account_info_iter)?;
+    let percent_tracker_pda = next_account_info(account_info_iter)?;
+    let wsol_amount_pda = next_account_info(account_info_iter)?;
+    let system_program = next_account_info(account_info_iter)?;
 
-pub fn print_execute_args(args: &Args) {
-    msg!("simple: {} ({})", args.simple.key, args.simple.owner);
-    msg!("user: {} ({})", args.user.key, args.user.owner);
-    msg!(
-        "user_claim_tracker_pda: {} ({})",
-        args.user_claim_tracker_pda.key,
-        args.user_claim_tracker_pda.owner
-    );
-    msg!(
-        "user_simple_pool_lp_ass_token_account: {} ({})",
-        args.user_simple_pool_lp_ass_token_account.key,
-        args.user_simple_pool_lp_ass_token_account.owner
-    );
-    msg!(
-        "user_simple_token_ass_account: {} ({})",
-        args.user_simple_token_ass_account.key,
-        args.user_simple_token_ass_account.owner
-    );
+    let percent_tracker_pda_increment = try_from_slice_unchecked::<Tracker>(&percent_tracker_pda.data.borrow())
+        .map_err(|_| ProgramError::InvalidAccountData)?.increment;
     
-    msg!(
-        "simple_token_mint_account: {} ({})",
-        args.simple_token_mint_account.key,
-        args.simple_token_mint_account.owner
-    );
-    msg!(
-        "simple_pool_lp_token_mint_account: {} ({})",
-        args.simple_pool_lp_token_mint_account.key,
-        args.simple_pool_lp_token_mint_account.owner
-    );
-    msg!(
-        "system_program: {} ({})",
-        args.system_program.key,
-        args.system_program.owner
-    );
-    msg!(
-        "token_program: {} ({})",
-        args.token_program.key,
-        args.token_program.owner
-    );
-    msg!(
-        "associated_token_program: {} ({})",
-        args.associated_token_program.key,
-        args.associated_token_program.owner
-    );
+    let wsol_amount_pda_amount = try_from_slice_unchecked::<WsolAmount>(&wsol_amount_pda.data.borrow())
+        .map_err(|_| ProgramError::InvalidAccountData)?.amount;
+
+    msg!("simple: {}, ({})", simple.key, simple.owner);
+    msg!("percent_tracker_pda: {}, ({}): {}", percent_tracker_pda.key, percent_tracker_pda.owner, percent_tracker_pda_increment);
+    msg!("wsol_amount_pda: {}, ({}): {}", wsol_amount_pda.key, wsol_amount_pda.owner, wsol_amount_pda_amount);
+    msg!("system_program: {}, ({})", system_program.key, system_program.owner);
+    Ok(())
 }

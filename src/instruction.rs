@@ -1,18 +1,18 @@
 use solana_program::program_error::ProgramError;
 
-pub enum SimpleInstructions {
+pub enum SimpleInstruction {
     InitRequiredProgramAccounts,
     InitRequiredUserAccountsAndExecute,
     Execute,
 }
 
-impl SimpleInstructions {
-    pub fn unpack(instruction_data: &[u8]) -> Result<Self, ProgramError> {
-        if instruction_data.is_empty() {
+impl SimpleInstruction {
+    pub fn unpack(input: &[u8]) -> Result<Self, ProgramError> {
+        if input.is_empty() {
             return Err(ProgramError::InvalidInstructionData);
         }
 
-        let tag = instruction_data[0];
+        let tag = input[0];
         Ok(match tag {
             0 => Self::InitRequiredProgramAccounts,
             1 => Self::InitRequiredUserAccountsAndExecute,

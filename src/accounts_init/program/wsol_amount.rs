@@ -1,7 +1,16 @@
-use borsh::{BorshDeserialize, BorshSerialize};
-use solana_program::{
-    account_info::AccountInfo, borsh1::try_from_slice_unchecked, program::invoke_signed,
-    program_error::ProgramError, pubkey::Pubkey, rent::Rent, system_instruction, sysvar::Sysvar,
+use {
+    borsh::{BorshDeserialize, BorshSerialize},
+    solana_program::{
+        account_info::{next_account_info, AccountInfo},
+        borsh1::try_from_slice_unchecked,
+        entrypoint::ProgramResult,
+        program::invoke_signed,
+        program_error::ProgramError,
+        pubkey::Pubkey,
+        rent::Rent,
+        system_instruction,
+        sysvar::Sysvar,
+    },
 };
 
 #[derive(BorshSerialize, BorshDeserialize)]
@@ -9,12 +18,15 @@ pub struct WsolAmount {
     pub amount: u64,
 }
 
-pub fn initialize_wsol_amount_account<'a>(
+pub fn initialize_wsol_amount_account(
     program_id: &Pubkey,
-    simple: &'a AccountInfo<'a>,
-    wsol_amount_pda: &'a AccountInfo<'a>,
-    system_program: &'a AccountInfo<'a>,
-) -> Result<(), ProgramError> {
+    accounts: &[AccountInfo],
+) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+    let simple = next_account_info(account_info_iter)?;
+    let wsol_amount_pda = next_account_info(account_info_iter)?;
+    let system_program = next_account_info(account_info_iter)?;
+
     let seed = b"wsol_amount_pda";
     let account_len: usize = std::mem::size_of::<u64>();
     let rent = Rent::get().unwrap();
