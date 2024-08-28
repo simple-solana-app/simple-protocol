@@ -16,7 +16,7 @@ const {
     ASSOCIATED_TOKEN_PROGRAM_ID
 } = require('@solana/spl-token');
 
-const SIMPLE_PROGRAM_ID = new PublicKey('63RCXX5X7u2r67rDpia976ymcToomLgRLvASV7N3fcTP');
+const SIMPLE_PROGRAM_ID = new PublicKey('FcZSeqBmwYukKXNQ2MzqdZs9vTaKwvhP2ABLn2F9VzEw');
 const simple_token_mint = new PublicKey('DJZ2QJ9x7S4XLR7fvPouR5nZfRXqw92Y7S2BNueZmmde');
 const simple_keypair = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFileSync('/home/seb/MY/KEYS/simple.json', 'utf8'))));
 
@@ -78,16 +78,14 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
             data: Buffer.from([0]),
         });
         
-        //will fail
-        const user_instruction_0 = new TransactionInstruction({
+        const user_instruction_1 = new TransactionInstruction({
             programId: SIMPLE_PROGRAM_ID,
             keys: [
                 { pubkey: user_keypair.publicKey, isSigner: true, isWritable: true },
-                { pubkey: percent_tracker_pda_pubkey, isSigner: false, isWritable: true },
-                { pubkey: wsol_sol_amount_pda_pubkey, isSigner: false, isWritable: true },
+                { pubkey: user_claim_tracker_pda_pubkey, isSigner: false, isWritable: true },
                 { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }
             ],
-            data: Buffer.from([0]),
+            data: Buffer.from([1]),
         });
 
         const compute_budget_ix = ComputeBudgetProgram.setComputeUnitLimit({
@@ -96,7 +94,7 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
         
         const transaction_with_instruction = new Transaction()
             .add(compute_budget_ix)
-            .add(user_instruction_0);
+            .add(user_instruction_1);
         
         const signature = await sendAndConfirmTransaction(connection, transaction_with_instruction, [user_keypair]);
 

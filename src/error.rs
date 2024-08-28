@@ -11,8 +11,8 @@ use {
 pub enum SimpleProtocolError {
     #[error("Invalid Signer")]
     InvalidSigner,
-    #[error("PDA Already Exists")]
-    PdaAlreadyExists,
+    #[error("Account Already Exists")]
+    AccountAlreadyExists,
 }
 
 impl From<SimpleProtocolError> for ProgramError {
@@ -40,8 +40,8 @@ impl PrintProgramError for SimpleProtocolError {
             SimpleProtocolError::InvalidSigner => {
                 msg!("Invalid Signer")
             }
-            SimpleProtocolError::PdaAlreadyExists => {
-                msg!("PDA Already Exists")
+            SimpleProtocolError::AccountAlreadyExists => {
+                msg!("Account Already Exists")
             }
         }
     }

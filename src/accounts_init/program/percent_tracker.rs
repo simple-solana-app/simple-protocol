@@ -1,5 +1,7 @@
 use {
-    crate::accounts_init::Tracker, borsh::BorshSerialize, solana_program::{
+    crate::accounts_init::Tracker,
+    borsh::BorshSerialize,
+    solana_program::{
         account_info::{next_account_info, AccountInfo},
         borsh1::try_from_slice_unchecked,
         entrypoint::ProgramResult,
@@ -9,7 +11,7 @@ use {
         rent::Rent,
         system_instruction,
         sysvar::Sysvar,
-    }
+    },
 };
 
 pub fn initialize_percent_tracker_account(
@@ -28,7 +30,6 @@ pub fn initialize_percent_tracker_account(
 
     let (_percent_tracker_address, bump_seed) = Pubkey::find_program_address(&[seed], program_id);
 
-    // Handle the result of `invoke_signed`
     invoke_signed(
         &system_instruction::create_account(
             simple.key,
