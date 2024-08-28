@@ -65,8 +65,6 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
             user1_keypair.publicKey,
         );
 
-        const associated_token_account_info = await connection.getAccountInfo(user_simple_ass_token_account_pubkey);
-
         const simple_instruction_0 = new TransactionInstruction({
             programId: SIMPLE_PROGRAM_ID,
             keys: [
@@ -83,6 +81,10 @@ const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
             keys: [
                 { pubkey: user_keypair.publicKey, isSigner: true, isWritable: true },
                 { pubkey: user_claim_tracker_pda_pubkey, isSigner: false, isWritable: true },
+                { pubkey: user_simple_ass_token_account_pubkey, isSigner: false, isWritable: true },
+                { pubkey: simple_token_mint, isSigner: false, isWritable: false },
+                { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+                { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
                 { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }
             ],
             data: Buffer.from([1]),

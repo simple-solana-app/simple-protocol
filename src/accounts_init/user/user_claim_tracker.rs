@@ -11,7 +11,7 @@ use solana_program::{
     sysvar::Sysvar,
 };
 
-use crate::accounts_init::Tracker;
+use crate::{accounts_init::Tracker, error::SimpleProtocolError};
 
 pub fn initialize_user_claim_tracker_account(
     program_id: &Pubkey,
@@ -30,29 +30,35 @@ pub fn initialize_user_claim_tracker_account(
     let (_user_claim_tracker_address, bump_seed) =
         Pubkey::find_program_address(&[seed, user.key.as_ref()], program_id);
 
-    invoke_signed(
-        &system_instruction::create_account(
-            user.key,
-            user_claim_tracker_pda.key,
-            rent_lamports,
-            account_len.try_into().unwrap(),
-            program_id,
-        ),
-        &[
-            user.clone(),
-            user_claim_tracker_pda.clone(),
-            system_program.clone(),
-        ],
-        &[&[seed, user.key.as_ref(), &[bump_seed]]],
-    )?;
+    if user_claim_tracker_pda.key == &_user_claim_tracker_address
+        && **user_claim_tracker_pda.lamports.borrow() == 0
+    {
+        invoke_signed(
+            &system_instruction::create_account(
+                user.key,
+                user_claim_tracker_pda.key,
+                rent_lamports,
+                account_len.try_into().unwrap(),
+                program_id,
+            ),
+            &[
+                user.clone(),
+                user_claim_tracker_pda.clone(),
+                system_program.clone(),
+            ],
+            &[&[seed, user.key.as_ref(), &[bump_seed]]],
+        )?;
 
-    let mut account_data =
-        try_from_slice_unchecked::<Tracker>(&user_claim_tracker_pda.data.borrow())
+        let mut account_data =
+            try_from_slice_unchecked::<Tracker>(&user_claim_tracker_pda.data.borrow())
+                .map_err(|_| ProgramError::InvalidAccountData)?;
+        account_data.increment = 0;
+        account_data
+            .serialize(&mut &mut user_claim_tracker_pda.data.borrow_mut()[..])
             .map_err(|_| ProgramError::InvalidAccountData)?;
-    account_data.increment = 0;
-    account_data
-        .serialize(&mut &mut user_claim_tracker_pda.data.borrow_mut()[..])
-        .map_err(|_| ProgramError::InvalidAccountData)?;
+    } else {
+        return Err(SimpleProtocolError::AccountAlreadyExists.into());
+    }
 
     Ok(())
 }
