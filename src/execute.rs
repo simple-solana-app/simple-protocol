@@ -1,24 +1,87 @@
-// use crate::{
-//     accounts_init::program::{tracker::Tracker, wsol_amount::WsolAmount},
-//     common::{
-//         PROGRAM_SIMPLE_ASS_TOKEN_ACCOUNT_INITIAL_AMOUNT, SIMPLE_LP_MINT, SIMPLE_MINT,
-//         SIMPLE_POOL_WSOL_TOKEN_ACCOUNT_PUBKEY, SIMPLE_PUBKEY,
-//     },
-//     error::SimpleProtocolError,
-//     print_shit::print_execute_args,
-//     transfer_simple::transfer_simple,
-//     Args,
-// };
-// use borsh::BorshSerialize;
-// use solana_program::{
-//     account_info::AccountInfo, borsh1::try_from_slice_unchecked, msg,
-//     native_token::LAMPORTS_PER_SOL, program_error::ProgramError, pubkey::Pubkey,
-// };
-// use spl_associated_token_account::get_associated_token_address;
-// use spl_token::{
-//     solana_program::program_pack::Pack,
-//     state::{Account as TokenAccount, Mint},
-// };
+use {
+    solana_program::{
+        account_info::{next_account_info, AccountInfo},
+        entrypoint::ProgramResult,
+        msg,
+        program::{invoke, invoke_signed},
+        pubkey::Pubkey,
+        rent::Rent,
+        system_instruction::create_account,
+        sysvar::Sysvar,
+    },
+    spl_token::{
+        instruction::initialize_account, solana_program::program_pack::Pack, state::Account,
+    },
+};
+
+pub fn execute(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
+    let account_info_iter = &mut accounts.iter();
+
+    let simple = next_account_info(account_info_iter)?;
+    let authority_pda = next_account_info(account_info_iter)?;
+    let program_simple_pda = next_account_info(account_info_iter)?;
+    let simple_token_mint = next_account_info(account_info_iter)?;
+    let token_program = next_account_info(account_info_iter)?;
+    let system_program = next_account_info(account_info_iter)?;
+
+    let authority_seed = b"authority";
+    let (_authority_pda_key, authority_bump_seed) =
+        Pubkey::find_program_address(&[authority_seed], program_id);
+
+    let program_simple_token_account_seed = b"simple";
+    let simple_rent = Rent::get()?;
+    let simple_lamports = simple_rent.minimum_balance(Account::LEN);
+
+    let (_program_simple_pda_key, simple_bump_seed) =
+        Pubkey::find_program_address(&[program_simple_token_account_seed], program_id);
+
+    let ix_create_account = create_account(
+        simple.key,
+        authority_pda.key,
+        simple_lamports,
+        Account::LEN as u64,
+        authority_pda.key,
+    );
+
+    invoke_signed(
+        &ix_create_account,
+        &[simple.clone(), system_program.clone()],
+        &[
+            &[program_simple_token_account_seed, &[simple_bump_seed]],
+            &[authority_seed, &[authority_bump_seed]],
+        ],
+    )?;
+
+    let ix_initialize_account = initialize_account(
+        token_program.key,
+        program_simple_pda.key,
+        simple_token_mint.key,
+        authority_pda.key,
+    )?;
+
+    invoke(
+        &ix_initialize_account,
+        &[
+            simple.clone(),
+            authority_pda.clone(),
+            simple_token_mint.clone(),
+            token_program.clone(),
+        ],
+    )?;
+
+    let program_simple_pda_amount = Account::unpack(&program_simple_pda.data.borrow())
+        .unwrap()
+        .amount;
+
+    msg!(
+        "program_simple_account: {}, ({}): {}",
+        program_simple_pda.key,
+        program_simple_pda.owner,
+        program_simple_pda_amount
+    );
+
+    Ok(())
+}
 
 // pub fn execute(program_id: &Pubkey, args: Args) -> Result<(), ProgramError> {
 //     print_execute_args(&args);

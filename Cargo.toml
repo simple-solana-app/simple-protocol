@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 borsh = "1.5.1"
-solana-program = "1.18.21"
-spl-token = { version="6.0.0", features = [ "no-entrypoint" ] }
+solana-program = "1.10.39"  # Ensure the version is consistent
+spl-token = { version = "3.3.0", features = ["no-entrypoint"] }  # If you are using SPL Token, align versions if possible
 spl-associated-token-account = { version = "2.0.0", features = [ "no-entrypoint" ] }
 thiserror = "1.0.63"
 num-derive = "0.4.2"

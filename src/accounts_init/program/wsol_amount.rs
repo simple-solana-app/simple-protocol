@@ -23,6 +23,7 @@ pub fn initialize_wsol_amount_account(
     accounts: &[AccountInfo],
 ) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
+
     let simple = next_account_info(account_info_iter)?;
     let wsol_amount_pda = next_account_info(account_info_iter)?;
     let system_program = next_account_info(account_info_iter)?;

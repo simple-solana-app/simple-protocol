@@ -1,9 +1,6 @@
 use {
     crate::{
-        accounts_init::{
-            program::{init_most_program_accounts, init_program_simple_account},
-            user::init_user_accounts,
-        },
+        accounts_init::program::init_most_program_accounts, execute::execute,
         instruction::SimpleInstruction,
     },
     solana_program::{account_info::AccountInfo, entrypoint::ProgramResult, pubkey::Pubkey},
@@ -18,11 +15,10 @@ impl Processor {
                 init_most_program_accounts(program_id, accounts)?;
                 Ok(())
             }
-            SimpleInstruction::InitRequiredUserAccounts => {
-                init_user_accounts(program_id, accounts)?;
+            SimpleInstruction::Execute => {
+                execute(program_id, accounts)?;
                 Ok(())
             }
-            SimpleInstruction::Execute => Ok(()),
         }
     }
 }

@@ -7,13 +7,8 @@ use {
         borsh1::try_from_slice_unchecked,
         entrypoint::ProgramResult,
         msg,
-        program::{invoke, invoke_signed},
         program_error::ProgramError,
-        program_pack::Pack,
         pubkey::Pubkey,
-        rent::Rent,
-        system_instruction::create_account,
-        sysvar::Sysvar,
     },
     wsol_amount::{initialize_wsol_amount_account, WsolAmount},
 };
@@ -24,14 +19,11 @@ pub mod wsol_amount;
 
 pub fn init_most_program_accounts(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
+
     let simple = next_account_info(account_info_iter)?;
     let percent_tracker_pda = next_account_info(account_info_iter)?;
     let wsol_amount_pda = next_account_info(account_info_iter)?;
     let authority_pda = next_account_info(account_info_iter)?;
-    let program_simple_pda = next_account_info(account_info_iter)?;
-    let simple_token_mint = next_account_info(account_info_iter)?;
-    let token_program = next_account_info(account_info_iter)?;
-    
     let system_program = next_account_info(account_info_iter)?;
 
     if simple.is_signer && simple.key.to_string().as_str() == SIMPLE_PUBKEY {
@@ -58,9 +50,6 @@ pub fn init_most_program_accounts(program_id: &Pubkey, accounts: &[AccountInfo])
             &[
                 simple.clone(),
                 authority_pda.clone(),
-                program_simple_pda.clone(),
-                simple_token_mint.clone(),
-                token_program.clone(),
                 system_program.clone(),
             ],
         )?;
@@ -99,19 +88,6 @@ pub fn init_most_program_accounts(program_id: &Pubkey, accounts: &[AccountInfo])
     } else {
         return Err(SimpleProtocolError::InvalidSigner.into());
     }
-
-    Ok(())
-}
-
-pub fn init_program_simple_account(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
-    let account_info_iter = &mut accounts.iter();
-    let simple = next_account_info(account_info_iter)?;
-    let authority_pda = next_account_info(account_info_iter)?;
-    let system_program = next_account_info(account_info_iter)?;
-
-    let authority_seed = b"authority";
-    let (_authority_pda_key, authority_bump_seed) =
-        Pubkey::find_program_address(&[authority_seed], program_id);
 
     Ok(())
 }

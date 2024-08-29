@@ -1,12 +1,16 @@
 use {
-    super::Tracker, solana_program::{
+    super::Tracker,
+    solana_program::{
         account_info::{next_account_info, AccountInfo},
         borsh1::try_from_slice_unchecked,
         entrypoint::ProgramResult,
         msg,
         program_error::ProgramError,
         pubkey::Pubkey,
-    }, spl_token::{solana_program::program_pack::Pack, state::Account}, user_claim_tracker::initialize_user_claim_tracker_account, user_simple_ata::initialize_user_simple_ata
+    },
+    spl_token::{solana_program::program_pack::Pack, state::Account},
+    user_claim_tracker::initialize_user_claim_tracker_account,
+    user_simple_ata::initialize_user_simple_ata,
 };
 
 mod user_claim_tracker;

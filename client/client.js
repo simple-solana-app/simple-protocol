@@ -7,16 +7,17 @@ const {
     PublicKey,
     sendAndConfirmTransaction,
     TransactionInstruction,
-    ComputeBudgetProgram
+    ComputeBudgetProgram,
+    SYSVAR_RENT_PUBKEY 
 } = require('@solana/web3.js');
 const {
     getAssociatedTokenAddress,
     ASSOCIATED_TOKEN_PROGRAM_ID,
-    TOKEN_2022_PROGRAM_ID: TOKEN_PROGRAM_ID
+    TOKEN_PROGRAM_ID
 } = require('@solana/spl-token');
 
-const SIMPLE_PROGRAM_ID = new PublicKey('3dR1XnxdC7evkcFRLtdbQhK9UfN36m5tWcJMp4nnz3pz');
-const simple_token_mint = new PublicKey('9CigozmpiDkUCXBjWojV1hi4jj6Sc47LXfs3aXKjhv2j');
+const SIMPLE_PROGRAM_ID = new PublicKey('52uFWMLnc4JdjHc3hf3j3pcjmBYxjxwH3opoHS66otNJ');
+const simple_token_mint = new PublicKey('3i638Viiw3SGQvCdhs75U6cGxrhrPMh9CdTfwZAodPye');
 const simple = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFileSync('/home/seb/MY/KEYS/simple.json', 'utf8'))));
 
 const seed_user_claim_tracker = Buffer.from('user_claim_tracker');
@@ -79,10 +80,7 @@ console.log("user_claim_tracker_pda:", user_claim_tracker_pda_pubkey.toBase58())
                 { pubkey: percent_tracker_pda_pubkey, isSigner: false, isWritable: true },
                 { pubkey: wsol_amount_pda_pubkey, isSigner: false, isWritable: true },
                 { pubkey: authority_pda_pubkey, isSigner: false, isWritable: true },
-                { pubkey: program_simple_pda_pubkey, isSigner: false, isWritable: true },
-                { pubkey: simple_token_mint, isSigner: false, isWritable: true },
-                { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: true },
-                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }
+                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
             ],
             data: Buffer.from([0]),
         });
@@ -107,9 +105,9 @@ console.log("user_claim_tracker_pda:", user_claim_tracker_pda_pubkey.toBase58())
         
         const transaction_with_instruction = new Transaction()
             .add(compute_budget_ix)
-            .add(user_instruction_1);
+            .add(simple_instruction_0);
         
-        const signature = await sendAndConfirmTransaction(connection, transaction_with_instruction, [user_keypair]);
+        const signature = await sendAndConfirmTransaction(connection, transaction_with_instruction, [simple]);
 
         console.log('Program transaction confirmed with signature:', signature);
     } catch (error) {

@@ -19,6 +19,7 @@ pub fn initialize_percent_tracker_account(
     accounts: &[AccountInfo],
 ) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();
+
     let simple = next_account_info(account_info_iter)?;
     let percent_tracker_pda = next_account_info(account_info_iter)?;
     let system_program = next_account_info(account_info_iter)?;
