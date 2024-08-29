@@ -8,7 +8,7 @@ use {
         program_error::ProgramError,
         pubkey::Pubkey,
         rent::Rent,
-        system_instruction,
+        system_instruction::create_account,
         sysvar::Sysvar,
     },
 };
@@ -27,16 +27,15 @@ pub fn initialize_wsol_amount_account(
     let wsol_amount_pda = next_account_info(account_info_iter)?;
     let system_program = next_account_info(account_info_iter)?;
 
-    let seed = b"wsol_amount_pda";
+    let seed = b"wsol_amount";
     let account_len: usize = std::mem::size_of::<u64>();
     let rent = Rent::get().unwrap();
     let rent_lamports = rent.minimum_balance(account_len);
 
     let (_wsol_balance_address, bump_seed) = Pubkey::find_program_address(&[seed], program_id);
 
-    // Handle the result of `invoke_signed`
     invoke_signed(
-        &system_instruction::create_account(
+        &create_account(
             simple.key,
             wsol_amount_pda.key,
             rent_lamports,

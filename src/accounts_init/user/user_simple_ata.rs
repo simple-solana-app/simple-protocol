@@ -1,9 +1,11 @@
-use solana_program::{
-    account_info::{next_account_info, AccountInfo},
-    entrypoint::ProgramResult,
-    program::invoke,
+use {
+    solana_program::{
+        account_info::{next_account_info, AccountInfo},
+        entrypoint::ProgramResult,
+        program::invoke,
+    },
+    spl_associated_token_account::instruction::create_associated_token_account_idempotent,
 };
-use spl_associated_token_account::instruction::create_associated_token_account_idempotent;
 
 pub fn initialize_user_simple_ata(accounts: &[AccountInfo]) -> ProgramResult {
     let account_info_iter = &mut accounts.iter();

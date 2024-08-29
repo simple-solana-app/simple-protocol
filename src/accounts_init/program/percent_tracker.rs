@@ -23,7 +23,7 @@ pub fn initialize_percent_tracker_account(
     let percent_tracker_pda = next_account_info(account_info_iter)?;
     let system_program = next_account_info(account_info_iter)?;
 
-    let seed = b"percent_tracker_pda";
+    let seed = b"percent_tracker";
     let account_len: usize = std::mem::size_of::<u8>();
     let rent = Rent::get().unwrap();
     let rent_lamports = rent.minimum_balance(account_len);
