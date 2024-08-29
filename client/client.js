@@ -12,12 +12,12 @@ const {
 const {
     getAssociatedTokenAddress,
     ASSOCIATED_TOKEN_PROGRAM_ID,
-    TOKEN_2022_PROGRAM_ID
+    TOKEN_2022_PROGRAM_ID: TOKEN_PROGRAM_ID
 } = require('@solana/spl-token');
 
-const SIMPLE_PROGRAM_ID = new PublicKey('8WHaQ1Ye4fKbf6vSTFeW5mPgtRowBareRdKkvxBQgyPk');
+const SIMPLE_PROGRAM_ID = new PublicKey('3dR1XnxdC7evkcFRLtdbQhK9UfN36m5tWcJMp4nnz3pz');
 const simple_token_mint = new PublicKey('9CigozmpiDkUCXBjWojV1hi4jj6Sc47LXfs3aXKjhv2j');
-const simple_keypair = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFileSync('/home/seb/MY/KEYS/simple.json', 'utf8'))));
+const simple = Keypair.fromSecretKey(new Uint8Array(JSON.parse(fs.readFileSync('/home/seb/MY/KEYS/simple.json', 'utf8'))));
 
 const seed_user_claim_tracker = Buffer.from('user_claim_tracker');
 
@@ -32,7 +32,7 @@ const seed_percent_tracker = Buffer.from('percent_tracker');
 const [percent_tracker_pda_pubkey] = PublicKey.findProgramAddressSync([seed_percent_tracker], SIMPLE_PROGRAM_ID);
 
 const seed_wsol_amount = Buffer.from('wsol_amount');
-const [wsol_sol_amount_pda_pubkey] = PublicKey.findProgramAddressSync([seed_wsol_amount], SIMPLE_PROGRAM_ID);
+const [wsol_amount_pda_pubkey] = PublicKey.findProgramAddressSync([seed_wsol_amount], SIMPLE_PROGRAM_ID);
 
 const seed_authority = Buffer.from('authority');
 const [authority_pda_pubkey] = PublicKey.findProgramAddressSync([seed_authority], SIMPLE_PROGRAM_ID);
@@ -45,17 +45,20 @@ const raydium_lp_token_mint = new PublicKey('Fep9kTWfPCQ6uADqdnLnnvYZ39jH7h1oQZV
 
 const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
 
-console.log("percent_tracker PDA:", percent_tracker_pda_pubkey.toBase58());
-console.log("wsol_amount PDA:", wsol_sol_amount_pda_pubkey.toBase58());
-console.log("authority PDA:", authority_pda_pubkey.toBase58());
-console.log("program_simple PDA:", program_simple_pda_pubkey.toBase58());
+console.log("percent_tracker_pda:", percent_tracker_pda_pubkey.toBase58());
+console.log("wsol_amount_pda:", wsol_amount_pda_pubkey.toBase58());
+console.log("authority_pda:", authority_pda_pubkey.toBase58());
+console.log("program_simple_pda:", program_simple_pda_pubkey.toBase58());
+console.log("user_claim_tracker_pda:", user_claim_tracker_pda_pubkey.toBase58());
 
 (async () => {
     try {
-        const user_simple_ass_token_account_pubkey = await getAssociatedTokenAddress(
+        const user_simple_ata_pubkey = await getAssociatedTokenAddress(
             simple_token_mint,
             user_keypair.publicKey,
         );
+        console.log("user_simple_ass_token_account:", user_simple_ata_pubkey.toBase58());
+
         const user1_simple_ass_token_account_pubkey = await getAssociatedTokenAddress(
             simple_token_mint,
             user1_keypair.publicKey,
@@ -72,14 +75,13 @@ console.log("program_simple PDA:", program_simple_pda_pubkey.toBase58());
         const simple_instruction_0 = new TransactionInstruction({
             programId: SIMPLE_PROGRAM_ID,
             keys: [
-                { pubkey: simple_keypair.publicKey, isSigner: true, isWritable: true },
+                { pubkey: simple.publicKey, isSigner: true, isWritable: true },
                 { pubkey: percent_tracker_pda_pubkey, isSigner: false, isWritable: true },
-                { pubkey: wsol_sol_amount_pda_pubkey, isSigner: false, isWritable: true },
+                { pubkey: wsol_amount_pda_pubkey, isSigner: false, isWritable: true },
                 { pubkey: authority_pda_pubkey, isSigner: false, isWritable: true },
                 { pubkey: program_simple_pda_pubkey, isSigner: false, isWritable: true },
-                { pubkey: simple_token_mint, isSigner: false, isWritable: false },
-                { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
-                { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
+                { pubkey: simple_token_mint, isSigner: false, isWritable: true },
+                { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: true },
                 { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }
             ],
             data: Buffer.from([0]),
@@ -90,11 +92,11 @@ console.log("program_simple PDA:", program_simple_pda_pubkey.toBase58());
             keys: [
                 { pubkey: user_keypair.publicKey, isSigner: true, isWritable: true },
                 { pubkey: user_claim_tracker_pda_pubkey, isSigner: false, isWritable: true },
-                { pubkey: user_simple_ass_token_account_pubkey, isSigner: false, isWritable: true },
-                { pubkey: simple_token_mint, isSigner: false, isWritable: false },
-                { pubkey: TOKEN_2022_PROGRAM_ID, isSigner: false, isWritable: false },
-                { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: false },
-                { pubkey: SystemProgram.programId, isSigner: false, isWritable: false }
+                { pubkey: user_simple_ata_pubkey, isSigner: false, isWritable: true },
+                { pubkey: simple_token_mint, isSigner: false, isWritable: true },
+                { pubkey: TOKEN_PROGRAM_ID, isSigner: false, isWritable: true },
+                { pubkey: ASSOCIATED_TOKEN_PROGRAM_ID, isSigner: false, isWritable: true },
+                { pubkey: SystemProgram.programId, isSigner: false, isWritable: true }
             ],
             data: Buffer.from([1]),
         });
@@ -105,9 +107,9 @@ console.log("program_simple PDA:", program_simple_pda_pubkey.toBase58());
         
         const transaction_with_instruction = new Transaction()
             .add(compute_budget_ix)
-            .add(simple_instruction_0);
+            .add(user_instruction_1);
         
-        const signature = await sendAndConfirmTransaction(connection, transaction_with_instruction, [simple_keypair]);
+        const signature = await sendAndConfirmTransaction(connection, transaction_with_instruction, [user_keypair]);
 
         console.log('Program transaction confirmed with signature:', signature);
     } catch (error) {
