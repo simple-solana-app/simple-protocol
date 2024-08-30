@@ -1,18 +1,14 @@
-[package]
-name = "simple-protocol"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = [
+    "programs/*"
+]
+resolver = "2"
 
-[dependencies]
-borsh = "1.5.1"
-solana-program = "1.10.39"  # Ensure the version is consistent
-spl-token = { version = "3.3.0", features = ["no-entrypoint"] }  # If you are using SPL Token, align versions if possible
-spl-associated-token-account = { version = "2.0.0", features = [ "no-entrypoint" ] }
-thiserror = "1.0.63"
-num-derive = "0.4.2"
-num-traits = "0.2.19"
-
-
-
-[lib]
-crate-type = ["cdylib"]
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+[profile.release.build-override]
+opt-level = 3
+incremental = false
+codegen-units = 1
