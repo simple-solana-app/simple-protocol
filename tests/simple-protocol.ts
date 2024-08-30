@@ -11,30 +11,37 @@ describe("simple-protocol", () => {
   anchor.setProvider(anchor.AnchorProvider.env());
 
   const program = anchor.workspace.SimpleProtocol as Program<SimpleProtocol>;
+
   const SIMPLE = Uint8Array.from(JSON.parse(fs.readFileSync("/home/seb/MY/KEYS/simple.json", "utf-8")));
   const SIMPLE_KEPPAIR = anchor.web3.Keypair.fromSecretKey(SIMPLE);
-  const SIMPLE_MINT = new PublicKey("GL3E99ERZBe68mYXrJZfEoSWwoY4QbCWT5H6Jvb7E5RC");
-  const SIMPLE_SIMPLE_TOKEN_ACCOUNT = new PublicKey("7SaGM8pKVz5JipgUT8LNkPuncXRoTKpkW7TSa3qkMxHY");
+  const USER = Uint8Array.from(JSON.parse(fs.readFileSync("/home/seb/MY/TEST_KEYS/user.json", "utf-8")));
+  const USER_KEPPAIR = anchor.web3.Keypair.fromSecretKey(USER);
 
   const [percentTrackerPda, percentTrackerBump] = PublicKey.findProgramAddressSync(
     [Buffer.from("percent_tracker")],
     program.programId
   );
 
- const [wsolBalancePda, wsolBalanceBump] = PublicKey.findProgramAddressSync(
+  const [wsolBalancePda, wsolBalanceBump] = PublicKey.findProgramAddressSync(
     [Buffer.from("wsol_balance")],
     program.programId
   );
 
- const [transferAuthorityPda, transferAuthorityBump] = PublicKey.findProgramAddressSync(
+  const [transferAuthorityPda, transferAuthorityBump] = PublicKey.findProgramAddressSync(
     [Buffer.from("transfer_authority")],
     program.programId
   );
 
- const [programSimpleTokenPda, programSimpleTokenBump] = PublicKey.findProgramAddressSync(
+  const [programSimpleTokenPda, programSimpleTokenBump] = PublicKey.findProgramAddressSync(
     [Buffer.from("program_simple_token_account")],
     program.programId
   );
+
+  const [userClaimTrackerPda, userClaimTrackerBump] = PublicKey.findProgramAddressSync(
+    [USER_KEPPAIR.publicKey.toBuffer()],  // Convert PublicKey to Buffer
+    program.programId
+  );
+
 
     // it("Most Program PDAs initialized", async () => {
     //   const tx = await program.methods.initializeMostProgramAccounts()
@@ -64,10 +71,22 @@ describe("simple-protocol", () => {
     
     //   console.log("Transaction signature:", tx);
     // });
+
+    // it("Created user_claim_tracker_pda", async () => {
+    //   const tx = await program.methods.initalizeUserClaimTracker()
+    //     .accounts({
+    //       user: USER_KEPPAIR.publicKey
+    //     })
+    //     .signers([USER_KEPPAIR])
+    //     .rpc();
+      
+    //   console.log("Transaction signature:", tx);
+    // })
+
     it("executed", async () => {
+      
       const tx = await program.methods.execute()
         .accounts({
-          dest: SIMPLE_SIMPLE_TOKEN_ACCOUNT
         })
         .signers([SIMPLE_KEPPAIR])
         .rpc();

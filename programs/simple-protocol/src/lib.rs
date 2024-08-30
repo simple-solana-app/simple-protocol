@@ -6,7 +6,20 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 declare_id!("DyFiYpt5vU7zeFS3UDs2gq7HuFNBarwMi8PwjKFfbumS");
 
 pub const SIMPLE_PUBKEY: &str = "E61fUAd1cxFES9kPckPhzwiiFMRo8ezAw7ZG5a8YD2jv";
-pub const SIMPLE_MINT: &str = "GL3E99ERZBe68mYXrJZfEoSWwoY4QbCWT5H6Jvb7E5RC";
+pub const SIMPLE_MINT: &str = "BS4rCV8NviZPp6cm4ACTKKvkhc5KgY8iqZqk3ksy5DoW";
+pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "B7h3156f7Kdc55xmAvne5saxpideE193Fcd7iQYcKPBC";
+pub const RAYDIUM_LP_MINT: &str = "7GyXAEuFyXKsw4h3jmi7G5oGYEUf7dbXET4MFK67Wtw1";
+pub const USER_RAYDIUM_LP_ATA: &str = "B7h3156f7Kdc55xmAvne5saxpideE193Fcd7iQYcKPBC";
+#[allow(clippy::excessive_precision)]
+pub const PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT: f64 = 416_220_420.696969666;
+
+#[error_code]
+pub enum SimpleProtocolError {
+    #[msg("Uninitialized account")]
+    UninitializedAccount,
+    #[msg("Max simple drained for now")]
+    MaxSimpleDrainedForNow,
+}
 
 #[program]
 pub mod simple_protocol {
@@ -22,55 +35,82 @@ pub mod simple_protocol {
 
         let wsol_balance = &mut ctx.accounts.wsol_balance;
         wsol_balance.amount = 0;
+
         Ok(())
     }
 
     pub fn initialize_remaining_program_accounts(
-        ctx: Context<InitializeRemainingProgramAccounts>,
+        _ctx: Context<InitializeRemainingProgramAccounts>,
     ) -> Result<()> {
-        let transfer_authority = &ctx.accounts.transfer_authority;
-        let program_simple_account = &ctx.accounts.program_simple_token;
+        Ok(())
+    }
 
-        msg!(
-            "transfer_authority {} ({})",
-            transfer_authority.key(),
-            transfer_authority.to_account_info().owner
-        );
-        msg!(
-            "program_simple_account {} ({}): {}",
-            program_simple_account.key(),
-            program_simple_account.to_account_info().owner,
-            program_simple_account.amount
-        );
+    pub fn initalize_user_claim_tracker(ctx: Context<InitializeUserClaimTracker>) -> Result<()> {
+        let user_claim_tracker = &mut ctx.accounts.user_claim_tracker;
+        user_claim_tracker.increment = 0;
 
         Ok(())
     }
 
     pub fn execute(ctx: Context<Execute>) -> Result<()> {
+        let user = &mut ctx.accounts.user;
         let percent_tracker = &mut ctx.accounts.percent_tracker;
         let wsol_balance = &mut ctx.accounts.wsol_balance;
 
         let transfer_authority = &ctx.accounts.transfer_authority;
         let bump_seed = ctx.bumps.transfer_authority;
         let signer_seeds: &[&[&[u8]]] = &[&[b"transfer_authority", &[bump_seed]]];
-        let program_simple_account = &mut ctx.accounts.program_simple_token;
+        let program_simple_token_account = &mut ctx.accounts.program_simple_token_account;
 
-        let dest = &mut ctx.accounts.dest;
+        let user_claim_tracker = &mut ctx.accounts.user_claim_tracker;
+        let user_simple_ata = &mut ctx.accounts.user_simple_ata;
+        let user_raydium_lp_ata = &ctx.accounts.user_raydium_lp_ata;
+
+        let raydium_pool_wsol_token_account = &ctx.accounts.raydium_pool_wsol_token_account;
+        let raydium_lp_mint = &ctx.accounts.raydium_lp_mint;
 
         let token_program = &ctx.accounts.token_program;
 
-        transfer(
-            CpiContext::new_with_signer(
-                token_program.to_account_info(),
-                Transfer {
-                    from: program_simple_account.to_account_info(),
-                    to: dest.to_account_info(),
-                    authority: transfer_authority.to_account_info(),
-                },
-                signer_seeds,
-            ),
-            10,
-        )?;
+        let total_drainable_simple =
+            program_simple_token_account.amount as f64 * percent_tracker.increment as f64 / 100.0;
+
+        if **user_claim_tracker.to_account_info().lamports.borrow() == 0
+            || **user_simple_ata.to_account_info().lamports.borrow() == 0
+            || **user_raydium_lp_ata.to_account_info().lamports.borrow() == 0
+        {
+            return Err(SimpleProtocolError::UninitializedAccount.into());
+        } else if (program_simple_token_account.amount as f64)
+            < (PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT - total_drainable_simple)
+        {
+            return Err(SimpleProtocolError::MaxSimpleDrainedForNow.into());
+        } else {
+            if raydium_pool_wsol_token_account.amount >= wsol_balance.amount + 50_000_000_000 {
+                wsol_balance.amount = raydium_pool_wsol_token_account.amount;
+
+                percent_tracker.increment += 1;
+            }
+
+            if user_claim_tracker.increment < percent_tracker.increment {
+                let user_claim_percent = percent_tracker.increment - user_claim_tracker.increment;
+                let user_lp_ratio =
+                    user_raydium_lp_ata.amount as f64 / raydium_lp_mint.supply as f64;
+                let user_share =
+                    total_drainable_simple * user_claim_percent as f64 / 100.0 * user_lp_ratio;
+
+                transfer(
+                    CpiContext::new_with_signer(
+                        token_program.to_account_info(),
+                        Transfer {
+                            from: program_simple_token_account.to_account_info(),
+                            to: user_simple_ata.to_account_info(),
+                            authority: transfer_authority.to_account_info(),
+                        },
+                        signer_seeds,
+                    ),
+                    user_share as u64,
+                )?;
+            }
+        }
 
         msg!(
             "percent_tracker {} ({}): {}",
@@ -91,15 +131,21 @@ pub mod simple_protocol {
         );
         msg!(
             "program_simple_account {} ({}): {}",
-            program_simple_account.key(),
-            program_simple_account.to_account_info().owner,
-            program_simple_account.amount
+            program_simple_token_account.key(),
+            program_simple_token_account.to_account_info().owner,
+            program_simple_token_account.amount
         );
         msg!(
-            "dest {} ({}): {}",
-            dest.key(),
-            dest.to_account_info().owner,
-            dest.amount
+            "user_claim_tracker {} ({}): {}",
+            user_claim_tracker.key(),
+            user_claim_tracker.to_account_info().owner,
+            user_claim_tracker.increment
+        );
+        msg!(
+            "user_simple_ata {} ({}): {}",
+            user_simple_ata.key(),
+            user_simple_ata.to_account_info().owner,
+            user_simple_ata.amount
         );
 
         Ok(())
@@ -128,8 +174,6 @@ pub struct Execute<'info> {
         bump
     )]
     transfer_authority: Account<'info, Authority>,
-    #[account(address = Pubkey::from_str(SIMPLE_MINT).unwrap())]
-    simple_mint: Account<'info, Mint>,
     #[account(
         mut,
         token::mint = simple_mint,
@@ -137,12 +181,33 @@ pub struct Execute<'info> {
         seeds = [b"program_simple_token_account"],
         bump
     )]
-    program_simple_token: Account<'info, TokenAccount>,
-    token_program: Program<'info, Token>,
+    program_simple_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
+        seeds = [user.key.as_ref()],
+        bump
     )]
-    dest: Account<'info, TokenAccount>,
+    user_claim_tracker: Account<'info, Tracker>,
+    #[account(
+        mut,
+        token::mint = simple_mint
+    )]
+    user_simple_ata: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        address = Pubkey::from_str(USER_RAYDIUM_LP_ATA).unwrap()
+    )]
+    user_raydium_lp_ata: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        address = Pubkey::from_str(RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT).unwrap()
+    )]
+    raydium_pool_wsol_token_account: Account<'info, TokenAccount>,
+    #[account(address = Pubkey::from_str(SIMPLE_MINT).unwrap())]
+    simple_mint: Account<'info, Mint>,
+    #[account(address = Pubkey::from_str(RAYDIUM_LP_MINT).unwrap())]
+    raydium_lp_mint: Account<'info, Mint>,
+    token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -198,6 +263,21 @@ pub struct InitializeRemainingProgramAccounts<'info> {
     )]
     program_simple_token: Account<'info, TokenAccount>,
     token_program: Program<'info, Token>,
+    system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct InitializeUserClaimTracker<'info> {
+    #[account(mut)]
+    user: Signer<'info>,
+    #[account(
+        init,
+        payer = user,
+        space = 8 + 1,
+        seeds = [user.key.as_ref()],
+        bump
+    )]
+    user_claim_tracker: Account<'info, Tracker>,
     system_program: Program<'info, System>,
 }
 
