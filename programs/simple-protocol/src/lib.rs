@@ -3,13 +3,14 @@ use std::str::FromStr;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-declare_id!("DyFiYpt5vU7zeFS3UDs2gq7HuFNBarwMi8PwjKFfbumS");
+declare_id!("7z4VpsvKVeGGq12iMMx9ei8f8GFNqMuK95YpixZWpXBJ");
 
 pub const SIMPLE_PUBKEY: &str = "E61fUAd1cxFES9kPckPhzwiiFMRo8ezAw7ZG5a8YD2jv";
 pub const SIMPLE_MINT: &str = "BS4rCV8NviZPp6cm4ACTKKvkhc5KgY8iqZqk3ksy5DoW";
-pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "B7h3156f7Kdc55xmAvne5saxpideE193Fcd7iQYcKPBC";
+pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "7aHhxyQ5cap1ZkMQ9p3Mx7Bggiq29V9JXwoJVvRJbdCe";
 pub const RAYDIUM_LP_MINT: &str = "7GyXAEuFyXKsw4h3jmi7G5oGYEUf7dbXET4MFK67Wtw1";
-pub const USER_RAYDIUM_LP_ATA: &str = "B7h3156f7Kdc55xmAvne5saxpideE193Fcd7iQYcKPBC";
+pub const USER_SIMPLE_ATA: &str = "2RzSzy62Gam6Lx7MckcfT81pE3aRPFvoe9bDF3zugsXF";
+pub const USER_RAYDIUM_LP_ATA: &str = "FGqHTVefxwtJfvM2S8TtptwpP8pjYW2XaisuUhGyUqmw";
 pub const PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT: u64 = 416220420696969666;
 
 #[error_code]
@@ -122,7 +123,7 @@ pub mod simple_protocol {
                     raydium_lp_mint.to_account_info().owner,
                     raydium_lp_mint.supply / LAMPORTS_PER_SOL
                 );
-                msg!("user_share: {} simple", user_share)
+                msg!("user_share: {} simple", user_share / LAMPORTS_PER_SOL as f64)
             }
         }
 
@@ -209,7 +210,7 @@ pub struct Execute<'info> {
     user_claim_tracker: Account<'info, Tracker>,
     #[account(
         mut,
-        token::mint = simple_mint
+        address = Pubkey::from_str(USER_SIMPLE_ATA).unwrap()
     )]
     user_simple_ata: Account<'info, TokenAccount>,
     #[account(
