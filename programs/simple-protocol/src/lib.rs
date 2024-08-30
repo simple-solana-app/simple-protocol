@@ -10,8 +10,7 @@ pub const SIMPLE_MINT: &str = "BS4rCV8NviZPp6cm4ACTKKvkhc5KgY8iqZqk3ksy5DoW";
 pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "B7h3156f7Kdc55xmAvne5saxpideE193Fcd7iQYcKPBC";
 pub const RAYDIUM_LP_MINT: &str = "7GyXAEuFyXKsw4h3jmi7G5oGYEUf7dbXET4MFK67Wtw1";
 pub const USER_RAYDIUM_LP_ATA: &str = "B7h3156f7Kdc55xmAvne5saxpideE193Fcd7iQYcKPBC";
-#[allow(clippy::excessive_precision)]
-pub const PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT: f64 = 416_220_420.696969666;
+pub const PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT: u64 = 416220420696969666;
 
 #[error_code]
 pub enum SimpleProtocolError {
@@ -23,6 +22,7 @@ pub enum SimpleProtocolError {
 
 #[program]
 pub mod simple_protocol {
+    use anchor_lang::solana_program::native_token::LAMPORTS_PER_SOL;
     use anchor_spl::token::{transfer, Transfer};
 
     use super::*;
@@ -80,7 +80,7 @@ pub mod simple_protocol {
         {
             return Err(SimpleProtocolError::UninitializedAccount.into());
         } else if (program_simple_token_account.amount as f64)
-            < (PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT - total_drainable_simple)
+            < (PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT as f64 - total_drainable_simple)
         {
             return Err(SimpleProtocolError::MaxSimpleDrainedForNow.into());
         } else {
@@ -109,6 +109,20 @@ pub mod simple_protocol {
                     ),
                     user_share as u64,
                 )?;
+
+                msg!(
+                    "user_raydium_lp_ata {} ({}): {} Raydium LP",
+                    user_raydium_lp_ata.key(),
+                    user_raydium_lp_ata.owner,
+                    user_raydium_lp_ata.amount / LAMPORTS_PER_SOL
+                );
+                msg!(
+                    "raydium_lp_mint {} ({}): {} Raydium LP Supply",
+                    raydium_lp_mint.key(),
+                    raydium_lp_mint.to_account_info().owner,
+                    raydium_lp_mint.supply / LAMPORTS_PER_SOL
+                );
+                msg!("user_share: {} simple", user_share)
             }
         }
 
@@ -119,10 +133,10 @@ pub mod simple_protocol {
             percent_tracker.increment
         );
         msg!(
-            "wsol_balance {} ({}): {}",
+            "wsol_balance {} ({}): {} WSOL",
             wsol_balance.key(),
             wsol_balance.to_account_info().owner,
-            wsol_balance.amount
+            wsol_balance.amount / LAMPORTS_PER_SOL
         );
         msg!(
             "transfer_authority {} ({})",
@@ -130,11 +144,16 @@ pub mod simple_protocol {
             transfer_authority.to_account_info().owner
         );
         msg!(
-            "program_simple_account {} ({}): {}",
+            "program_simple_account {} ({}): {} simple",
             program_simple_token_account.key(),
             program_simple_token_account.to_account_info().owner,
-            program_simple_token_account.amount
+            program_simple_token_account.amount / LAMPORTS_PER_SOL
         );
+        msg!(
+            "total_drainable_simple {} simple",
+            total_drainable_simple / LAMPORTS_PER_SOL as f64
+        );
+
         msg!(
             "user_claim_tracker {} ({}): {}",
             user_claim_tracker.key(),
@@ -142,10 +161,10 @@ pub mod simple_protocol {
             user_claim_tracker.increment
         );
         msg!(
-            "user_simple_ata {} ({}): {}",
+            "user_simple_ata {} ({}): {} simple",
             user_simple_ata.key(),
             user_simple_ata.to_account_info().owner,
-            user_simple_ata.amount
+            user_simple_ata.amount / LAMPORTS_PER_SOL
         );
 
         Ok(())
