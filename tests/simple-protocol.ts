@@ -8,8 +8,7 @@ describe("simple-protocol", () => {
 
   const program = anchor.workspace.SimpleProtocol as Program<SimpleProtocol>;
 
-  it("Is initialized!", async () => {
-    // Add your test here.
+  it("Program pdas initialized", async () => {
     const tx = await program.methods.initialize().rpc();
     console.log("Your transaction signature", tx);
   });
