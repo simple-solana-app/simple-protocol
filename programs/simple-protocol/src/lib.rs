@@ -6,6 +6,7 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 declare_id!("7z4VpsvKVeGGq12iMMx9ei8f8GFNqMuK95YpixZWpXBJ");
 
 pub const SIMPLE_PUBKEY: &str = "E61fUAd1cxFES9kPckPhzwiiFMRo8ezAw7ZG5a8YD2jv";
+pub const SIMPLE_SIMPLE_ATA: &str = "ECufaM43WUqQwpwFxeLGVh2ej2pAKYKaYueUmGH418z8";
 pub const SIMPLE_MINT: &str = "BS4rCV8NviZPp6cm4ACTKKvkhc5KgY8iqZqk3ksy5DoW";
 pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "7aHhxyQ5cap1ZkMQ9p3Mx7Bggiq29V9JXwoJVvRJbdCe";
 pub const RAYDIUM_LP_MINT: &str = "7GyXAEuFyXKsw4h3jmi7G5oGYEUf7dbXET4MFK67Wtw1";
@@ -55,6 +56,9 @@ pub mod simple_protocol {
 
     pub fn execute(ctx: Context<Execute>) -> Result<()> {
         let user = &mut ctx.accounts.user;
+
+        msg!("user {} ({})", user.key(), user.to_account_info().owner,);
+
         let percent_tracker = &mut ctx.accounts.percent_tracker;
         let wsol_balance = &mut ctx.accounts.wsol_balance;
 
@@ -70,11 +74,73 @@ pub mod simple_protocol {
         let raydium_pool_wsol_token_account = &ctx.accounts.raydium_pool_wsol_token_account;
         let raydium_lp_mint = &ctx.accounts.raydium_lp_mint;
 
+        let simple_simple_ata = &mut ctx.accounts.simple_simple_ata;
+
         let token_program = &ctx.accounts.token_program;
 
         let total_drainable_simple =
             program_simple_token_account.amount as f64 * percent_tracker.increment as f64 / 100.0;
 
+        msg!(
+            "percent_tracker {} ({}): {}%",
+            percent_tracker.key(),
+            percent_tracker.to_account_info().owner,
+            percent_tracker.increment
+        );
+
+        msg!(
+            "wsol_balance {} ({}): {} WSOL",
+            wsol_balance.key(),
+            wsol_balance.to_account_info().owner,
+            wsol_balance.amount / LAMPORTS_PER_SOL
+        );
+
+        msg!(
+            "raydium_pool_wsol_token_account {} ({}): {} WSOL",
+            raydium_pool_wsol_token_account.key(),
+            raydium_pool_wsol_token_account.to_account_info().owner,
+            raydium_pool_wsol_token_account.amount / LAMPORTS_PER_SOL
+        );
+
+        msg!(
+            "transfer_authority {} ({})",
+            transfer_authority.key(),
+            transfer_authority.to_account_info().owner
+        );
+
+        msg!(
+            "program_simple_account {} ({}): {} simple",
+            program_simple_token_account.key(),
+            program_simple_token_account.to_account_info().owner,
+            program_simple_token_account.amount / LAMPORTS_PER_SOL
+        );
+
+        msg!(
+            "total_drainable_simple {} simple",
+            total_drainable_simple / LAMPORTS_PER_SOL as f64
+        );
+
+        msg!(
+            "There can't be less than {} - {} = {} simple in pool",
+            PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT as f64 / LAMPORTS_PER_SOL as f64,
+            total_drainable_simple / LAMPORTS_PER_SOL as f64,
+            PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT as f64 / LAMPORTS_PER_SOL as f64
+                - total_drainable_simple / LAMPORTS_PER_SOL as f64
+        );
+
+        msg!(
+            "user_claim_tracker {} ({}): {}",
+            user_claim_tracker.key(),
+            user_claim_tracker.to_account_info().owner,
+            user_claim_tracker.increment
+        );
+
+        msg!(
+            "user_simple_ata {} ({}): {} simple",
+            user_simple_ata.key(),
+            user_simple_ata.to_account_info().owner,
+            user_simple_ata.amount / LAMPORTS_PER_SOL
+        );
         if **user_claim_tracker.to_account_info().lamports.borrow() == 0
             || **user_simple_ata.to_account_info().lamports.borrow() == 0
             || **user_raydium_lp_ata.to_account_info().lamports.borrow() == 0
@@ -97,6 +163,10 @@ pub mod simple_protocol {
                     user_raydium_lp_ata.amount as f64 / raydium_lp_mint.supply as f64;
                 let user_share =
                     total_drainable_simple * user_claim_percent as f64 / 100.0 * user_lp_ratio;
+                
+                let simple_share = user_share / 100.0;
+
+                let real_user_share = user_share - simple_share;
 
                 transfer(
                     CpiContext::new_with_signer(
@@ -108,8 +178,22 @@ pub mod simple_protocol {
                         },
                         signer_seeds,
                     ),
-                    user_share as u64,
+                    real_user_share as u64,
                 )?;
+                transfer(
+                    CpiContext::new_with_signer(
+                        token_program.to_account_info(),
+                        Transfer {
+                            from: program_simple_token_account.to_account_info(),
+                            to: simple_simple_ata.to_account_info(),
+                            authority: transfer_authority.to_account_info(),
+                        },
+                        signer_seeds,
+                    ),
+                    simple_share as u64,
+                )?;
+
+                user_claim_tracker.increment = percent_tracker.increment;
 
                 msg!(
                     "user_raydium_lp_ata {} ({}): {} Raydium LP",
@@ -123,50 +207,28 @@ pub mod simple_protocol {
                     raydium_lp_mint.to_account_info().owner,
                     raydium_lp_mint.supply / LAMPORTS_PER_SOL
                 );
-                msg!("user_share: {} simple", user_share / LAMPORTS_PER_SOL as f64)
+
+                msg!(
+                    "user gets {} of {}% of {} simple",
+                    user_lp_ratio,
+                    user_claim_percent,
+                    total_drainable_simple / LAMPORTS_PER_SOL as f64
+                );
+
+                msg!(
+                    "full user_share: {} simple",
+                    user_share / LAMPORTS_PER_SOL as f64
+                );
+                msg!(
+                    "real_user_share: {} simple",
+                    real_user_share / LAMPORTS_PER_SOL as f64
+                );
+                msg!(
+                    "simple_share: {} simple",
+                    simple_share / LAMPORTS_PER_SOL as f64
+                )
             }
         }
-
-        msg!(
-            "percent_tracker {} ({}): {}",
-            percent_tracker.key(),
-            percent_tracker.to_account_info().owner,
-            percent_tracker.increment
-        );
-        msg!(
-            "wsol_balance {} ({}): {} WSOL",
-            wsol_balance.key(),
-            wsol_balance.to_account_info().owner,
-            wsol_balance.amount / LAMPORTS_PER_SOL
-        );
-        msg!(
-            "transfer_authority {} ({})",
-            transfer_authority.key(),
-            transfer_authority.to_account_info().owner
-        );
-        msg!(
-            "program_simple_account {} ({}): {} simple",
-            program_simple_token_account.key(),
-            program_simple_token_account.to_account_info().owner,
-            program_simple_token_account.amount / LAMPORTS_PER_SOL
-        );
-        msg!(
-            "total_drainable_simple {} simple",
-            total_drainable_simple / LAMPORTS_PER_SOL as f64
-        );
-
-        msg!(
-            "user_claim_tracker {} ({}): {}",
-            user_claim_tracker.key(),
-            user_claim_tracker.to_account_info().owner,
-            user_claim_tracker.increment
-        );
-        msg!(
-            "user_simple_ata {} ({}): {} simple",
-            user_simple_ata.key(),
-            user_simple_ata.to_account_info().owner,
-            user_simple_ata.amount / LAMPORTS_PER_SOL
-        );
 
         Ok(())
     }
@@ -223,6 +285,11 @@ pub struct Execute<'info> {
         address = Pubkey::from_str(RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT).unwrap()
     )]
     raydium_pool_wsol_token_account: Account<'info, TokenAccount>,
+    #[account(
+        mut,
+        address = Pubkey::from_str(SIMPLE_SIMPLE_ATA).unwrap()
+    )]
+    simple_simple_ata: Account<'info, TokenAccount>,
     #[account(address = Pubkey::from_str(SIMPLE_MINT).unwrap())]
     simple_mint: Account<'info, Mint>,
     #[account(address = Pubkey::from_str(RAYDIUM_LP_MINT).unwrap())]
