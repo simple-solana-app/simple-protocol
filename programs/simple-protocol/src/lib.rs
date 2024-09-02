@@ -6,28 +6,29 @@ use anchor_spl::token::{Mint, Token, TokenAccount};
 declare_id!("7z4VpsvKVeGGq12iMMx9ei8f8GFNqMuK95YpixZWpXBJ");
 
 pub const SIMPLE_PUBKEY: &str = "E61fUAd1cxFES9kPckPhzwiiFMRo8ezAw7ZG5a8YD2jv";
-pub const SIMPLE_SIMPLE_ATA: &str = "ECufaM43WUqQwpwFxeLGVh2ej2pAKYKaYueUmGH418z8";
 pub const SIMPLE_MINT: &str = "BS4rCV8NviZPp6cm4ACTKKvkhc5KgY8iqZqk3ksy5DoW";
 pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "7aHhxyQ5cap1ZkMQ9p3Mx7Bggiq29V9JXwoJVvRJbdCe";
 pub const RAYDIUM_LP_MINT: &str = "7GyXAEuFyXKsw4h3jmi7G5oGYEUf7dbXET4MFK67Wtw1";
-pub const USER_SIMPLE_ATA: &str = "2RzSzy62Gam6Lx7MckcfT81pE3aRPFvoe9bDF3zugsXF";
-pub const USER_RAYDIUM_LP_ATA: &str = "FGqHTVefxwtJfvM2S8TtptwpP8pjYW2XaisuUhGyUqmw";
-pub const PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT: u64 = 416220420696969666;
+pub const CREATOR_SIMPLE_TOKEN_ACCOUNT: &str = "ECufaM43WUqQwpwFxeLGVh2ej2pAKYKaYueUmGH418z8";
+pub const PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT: u64 = 41542042069666;
 
 #[error_code]
 pub enum SimpleProtocolError {
     #[msg("Uninitialized account")]
     UninitializedAccount,
+    #[msg("Zero LP tokens")]
+    ZeroLpTokens,
     #[msg("Max simple drained for now")]
     MaxSimpleDrainedForNow,
 }
 
 #[program]
 pub mod simple_protocol {
-    use anchor_lang::solana_program::native_token::LAMPORTS_PER_SOL;
-    use anchor_spl::token::{transfer, Transfer};
-
-    use super::*;
+    use {
+        super::*,
+        anchor_lang::{prelude::Context, solana_program::native_token::LAMPORTS_PER_SOL},
+        anchor_spl::token::{transfer, Transfer},
+    };
 
     pub fn initialize_most_program_accounts(
         ctx: Context<InitializeMostProgramAccounts>,
@@ -68,13 +69,13 @@ pub mod simple_protocol {
         let program_simple_token_account = &mut ctx.accounts.program_simple_token_account;
 
         let user_claim_tracker = &mut ctx.accounts.user_claim_tracker;
-        let user_simple_ata = &mut ctx.accounts.user_simple_ata;
+        let user_simple_token_account = &mut ctx.accounts.user_simple_token_account;
         let user_raydium_lp_ata = &ctx.accounts.user_raydium_lp_ata;
 
         let raydium_pool_wsol_token_account = &ctx.accounts.raydium_pool_wsol_token_account;
         let raydium_lp_mint = &ctx.accounts.raydium_lp_mint;
 
-        let simple_simple_ata = &mut ctx.accounts.simple_simple_ata;
+        let creator_simple_token_account = &mut ctx.accounts.creator_simple_token_account;
 
         let token_program = &ctx.accounts.token_program;
 
@@ -137,15 +138,22 @@ pub mod simple_protocol {
 
         msg!(
             "user_simple_ata {} ({}): {} simple",
-            user_simple_ata.key(),
-            user_simple_ata.to_account_info().owner,
-            user_simple_ata.amount / LAMPORTS_PER_SOL
+            user_simple_token_account.key(),
+            user_simple_token_account.to_account_info().owner,
+            user_simple_token_account.amount / LAMPORTS_PER_SOL
         );
         if **user_claim_tracker.to_account_info().lamports.borrow() == 0
-            || **user_simple_ata.to_account_info().lamports.borrow() == 0
+            || **user_simple_token_account
+                .to_account_info()
+                .lamports
+                .borrow()
+                == 0
             || **user_raydium_lp_ata.to_account_info().lamports.borrow() == 0
         {
             return Err(SimpleProtocolError::UninitializedAccount.into());
+        } else if user_raydium_lp_ata.amount == 0 {
+            return Err(SimpleProtocolError::ZeroLpTokens.into());
+
         } else if (program_simple_token_account.amount as f64)
             < (PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT as f64 - total_drainable_simple)
         {
@@ -153,7 +161,6 @@ pub mod simple_protocol {
         } else {
             if raydium_pool_wsol_token_account.amount >= wsol_balance.amount + 50_000_000_000 {
                 wsol_balance.amount = raydium_pool_wsol_token_account.amount;
-
                 percent_tracker.increment += 1;
             }
 
@@ -163,7 +170,7 @@ pub mod simple_protocol {
                     user_raydium_lp_ata.amount as f64 / raydium_lp_mint.supply as f64;
                 let user_share =
                     total_drainable_simple * user_claim_percent as f64 / 100.0 * user_lp_ratio;
-                
+
                 let simple_share = user_share / 100.0;
 
                 let real_user_share = user_share - simple_share;
@@ -173,19 +180,20 @@ pub mod simple_protocol {
                         token_program.to_account_info(),
                         Transfer {
                             from: program_simple_token_account.to_account_info(),
-                            to: user_simple_ata.to_account_info(),
+                            to: user_simple_token_account.to_account_info(),
                             authority: transfer_authority.to_account_info(),
                         },
                         signer_seeds,
                     ),
                     real_user_share as u64,
                 )?;
+
                 transfer(
                     CpiContext::new_with_signer(
                         token_program.to_account_info(),
                         Transfer {
                             from: program_simple_token_account.to_account_info(),
-                            to: simple_simple_ata.to_account_info(),
+                            to: creator_simple_token_account.to_account_info(),
                             authority: transfer_authority.to_account_info(),
                         },
                         signer_seeds,
@@ -251,7 +259,6 @@ pub struct Execute<'info> {
     )]
     wsol_balance: Account<'info, Balance>,
     #[account(
-        mut,
         seeds = [b"transfer_authority"],
         bump
     )]
@@ -272,12 +279,12 @@ pub struct Execute<'info> {
     user_claim_tracker: Account<'info, Tracker>,
     #[account(
         mut,
-        address = Pubkey::from_str(USER_SIMPLE_ATA).unwrap()
+        token::mint = simple_mint,
     )]
-    user_simple_ata: Account<'info, TokenAccount>,
+    user_simple_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
-        address = Pubkey::from_str(USER_RAYDIUM_LP_ATA).unwrap()
+        token::mint = raydium_lp_mint,
     )]
     user_raydium_lp_ata: Account<'info, TokenAccount>,
     #[account(
@@ -287,9 +294,9 @@ pub struct Execute<'info> {
     raydium_pool_wsol_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
-        address = Pubkey::from_str(SIMPLE_SIMPLE_ATA).unwrap()
+        address = Pubkey::from_str(CREATOR_SIMPLE_TOKEN_ACCOUNT).unwrap()
     )]
-    simple_simple_ata: Account<'info, TokenAccount>,
+    creator_simple_token_account: Account<'info, TokenAccount>,
     #[account(address = Pubkey::from_str(SIMPLE_MINT).unwrap())]
     simple_mint: Account<'info, Mint>,
     #[account(address = Pubkey::from_str(RAYDIUM_LP_MINT).unwrap())]
@@ -338,8 +345,6 @@ pub struct InitializeRemainingProgramAccounts<'info> {
         bump
     )]
     transfer_authority: Account<'info, Authority>,
-    #[account(address = Pubkey::from_str(SIMPLE_MINT).unwrap())]
-    simple_mint: Account<'info, Mint>,
     #[account(
         init,
         payer = simple,
@@ -348,7 +353,9 @@ pub struct InitializeRemainingProgramAccounts<'info> {
         seeds = [b"program_simple_token_account"],
         bump
     )]
-    program_simple_token: Account<'info, TokenAccount>,
+    program_simple_token_account: Account<'info, TokenAccount>,
+    #[account(address = Pubkey::from_str(SIMPLE_MINT).unwrap())]
+    simple_mint: Account<'info, Mint>,
     token_program: Program<'info, Token>,
     system_program: Program<'info, System>,
 }
