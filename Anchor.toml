@@ -5,7 +5,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-simple_protocol = "sTPEtENLzqMoNMQaCBKQ9qKcNaoRJqYsiFB8yJwfD2a"
+simple_protocol = "BbYJTNjp7BHMdBcy83kVWCbagB2iN26ynKphPK5DZFxG"
 
 [registry]
 url = "https://api.apr.dev"

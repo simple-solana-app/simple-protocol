@@ -3,14 +3,14 @@ use std::str::FromStr;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-declare_id!("sTPEtENLzqMoNMQaCBKQ9qKcNaoRJqYsiFB8yJwfD2a");
+declare_id!("BbYJTNjp7BHMdBcy83kVWCbagB2iN26ynKphPK5DZFxG");
 
 pub const SIMPLE_PUBKEY: &str = "E61fUAd1cxFES9kPckPhzwiiFMRo8ezAw7ZG5a8YD2jv";
-pub const SIMPLE_MINT: &str = "7nsvdMSxgc4UyFU5HaGyfvfaPjvtEkGb11C6t2CMCHzC";
-pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "J6ndX26GXT2Zqm5qb55XPpJ6rsiqTG6mUjSNjAVSrcV";
-pub const RAYDIUM_LP_MINT: &str = "8GKTVTaE6k99H6AcxK8HaiHWr9L6F1rLyiLGSRXy1EE1";
-pub const CREATOR_SIMPLE_TOKEN_ACCOUNT: &str = "14wZ9H1xkQQsaXScKfvMgMv2naPufyqDaJ6bnRhr3aa";
-pub const PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT: u64 = 41542042069666;
+pub const SIMPLE_MINT: &str = "BKPHSeJ4DmQnnT7NwoqirjJaM6GVyxJJyYoHd7TA4hsD";
+pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "6XY1UXw8i4ZydPL4B4Wid2kNDJ7XTDYmFx7Q9ULCUYFJ";
+pub const RAYDIUM_LP_MINT: &str = "B9F82waRKg622E9FJN9fLN43TNDctGEAqKvCpWvccgvB";
+pub const CREATOR_SIMPLE_TOKEN_ACCOUNT: &str = "8MQDmMgGFV3cA2LBtep1zwh5Sftyk6pw7yzgRjHc4okM";
+pub const PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT: u64 = 415420420696969666;
 
 #[error_code]
 pub enum SimpleProtocolError {
@@ -282,15 +282,9 @@ pub struct Execute<'info> {
         token::mint = simple_mint,
     )]
     user_simple_token_account: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        token::mint = raydium_lp_mint,
-    )]
+    #[account(token::mint = raydium_lp_mint,)]
     user_raydium_lp_ata: Account<'info, TokenAccount>,
-    #[account(
-        mut,
-        address = Pubkey::from_str(RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT).unwrap()
-    )]
+    #[account(address = Pubkey::from_str(RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT).unwrap())]
     raydium_pool_wsol_token_account: Account<'info, TokenAccount>,
     #[account(
         mut,
