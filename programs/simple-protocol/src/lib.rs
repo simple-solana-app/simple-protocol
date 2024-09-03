@@ -168,8 +168,10 @@ pub mod simple_protocol {
                 let user_claim_percent = percent_tracker.increment - user_claim_tracker.increment;
                 let user_lp_ratio =
                     user_raydium_lp_ata.amount as f64 / raydium_lp_mint.supply as f64;
+                let user_drainable_simple = program_simple_token_account.amount as f64 * user_claim_percent as f64 / 100.0;
+
                 let user_share =
-                    total_drainable_simple * user_claim_percent as f64 / 100.0 * user_lp_ratio;
+                    user_drainable_simple * user_lp_ratio;
 
                 let simple_share = user_share / 100.0;
 
@@ -217,10 +219,13 @@ pub mod simple_protocol {
                 );
 
                 msg!(
-                    "user gets {} of {}% of {} simple",
+                    "user_drainable_simple {} simple",
+                    user_drainable_simple / LAMPORTS_PER_SOL as f64,
+                );
+                msg!(
+                    "user gets {} of {} simple",
                     user_lp_ratio,
-                    user_claim_percent,
-                    total_drainable_simple / LAMPORTS_PER_SOL as f64
+                    user_drainable_simple / LAMPORTS_PER_SOL as f64,
                 );
 
                 msg!(
