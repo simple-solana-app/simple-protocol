@@ -3,13 +3,13 @@ use std::str::FromStr;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-declare_id!("7z4VpsvKVeGGq12iMMx9ei8f8GFNqMuK95YpixZWpXBJ");
+declare_id!("52Aa2DSsoMTVAor8uBTexAGP9VmLUuAXHm52tP5sbZxk");
 
 pub const SIMPLE_PUBKEY: &str = "E61fUAd1cxFES9kPckPhzwiiFMRo8ezAw7ZG5a8YD2jv";
-pub const SIMPLE_MINT: &str = "BS4rCV8NviZPp6cm4ACTKKvkhc5KgY8iqZqk3ksy5DoW";
+pub const SIMPLE_MINT: &str = "7nsvdMSxgc4UyFU5HaGyfvfaPjvtEkGb11C6t2CMCHzC";
 pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "7aHhxyQ5cap1ZkMQ9p3Mx7Bggiq29V9JXwoJVvRJbdCe";
 pub const RAYDIUM_LP_MINT: &str = "7GyXAEuFyXKsw4h3jmi7G5oGYEUf7dbXET4MFK67Wtw1";
-pub const CREATOR_SIMPLE_TOKEN_ACCOUNT: &str = "ECufaM43WUqQwpwFxeLGVh2ej2pAKYKaYueUmGH418z8";
+pub const CREATOR_SIMPLE_TOKEN_ACCOUNT: &str = "6y6zKKqcjFobkRDVKrE9wRRQiJtp9H51RQ6unP2fcABM";
 pub const PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT: u64 = 41542042069666;
 
 #[error_code]
