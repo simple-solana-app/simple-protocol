@@ -3,13 +3,13 @@ use std::str::FromStr;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-declare_id!("52Aa2DSsoMTVAor8uBTexAGP9VmLUuAXHm52tP5sbZxk");
+declare_id!("sTPEtENLzqMoNMQaCBKQ9qKcNaoRJqYsiFB8yJwfD2a");
 
 pub const SIMPLE_PUBKEY: &str = "E61fUAd1cxFES9kPckPhzwiiFMRo8ezAw7ZG5a8YD2jv";
 pub const SIMPLE_MINT: &str = "7nsvdMSxgc4UyFU5HaGyfvfaPjvtEkGb11C6t2CMCHzC";
-pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "7aHhxyQ5cap1ZkMQ9p3Mx7Bggiq29V9JXwoJVvRJbdCe";
-pub const RAYDIUM_LP_MINT: &str = "7GyXAEuFyXKsw4h3jmi7G5oGYEUf7dbXET4MFK67Wtw1";
-pub const CREATOR_SIMPLE_TOKEN_ACCOUNT: &str = "6y6zKKqcjFobkRDVKrE9wRRQiJtp9H51RQ6unP2fcABM";
+pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "J6ndX26GXT2Zqm5qb55XPpJ6rsiqTG6mUjSNjAVSrcV";
+pub const RAYDIUM_LP_MINT: &str = "8GKTVTaE6k99H6AcxK8HaiHWr9L6F1rLyiLGSRXy1EE1";
+pub const CREATOR_SIMPLE_TOKEN_ACCOUNT: &str = "14wZ9H1xkQQsaXScKfvMgMv2naPufyqDaJ6bnRhr3aa";
 pub const PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT: u64 = 41542042069666;
 
 #[error_code]
