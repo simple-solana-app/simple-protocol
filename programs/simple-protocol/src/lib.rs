@@ -3,13 +3,13 @@ use std::str::FromStr;
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
 
-declare_id!("BbYJTNjp7BHMdBcy83kVWCbagB2iN26ynKphPK5DZFxG");
+declare_id!("6yUtbQXotEAbzJBHLghordn9r3vZ8wRuCbFBxMaatVoF");
 
 pub const SIMPLE_PUBKEY: &str = "E61fUAd1cxFES9kPckPhzwiiFMRo8ezAw7ZG5a8YD2jv";
-pub const SIMPLE_MINT: &str = "BKPHSeJ4DmQnnT7NwoqirjJaM6GVyxJJyYoHd7TA4hsD";
-pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "6XY1UXw8i4ZydPL4B4Wid2kNDJ7XTDYmFx7Q9ULCUYFJ";
-pub const RAYDIUM_LP_MINT: &str = "B9F82waRKg622E9FJN9fLN43TNDctGEAqKvCpWvccgvB";
-pub const CREATOR_SIMPLE_TOKEN_ACCOUNT: &str = "8MQDmMgGFV3cA2LBtep1zwh5Sftyk6pw7yzgRjHc4okM";
+pub const SIMPLE_MINT: &str = "4QUwG4eADsjfaZ5nTEd6eGF5he8vR8FCFLPgwmpiJRD5";
+pub const RAYDIUM_POOL_WSOL_TOKEN_ACCOUNT: &str = "364AQ7xZsUn3R9qkYSDVks1W6pfiXzZosJjZ6o7gv9by";
+pub const RAYDIUM_LP_MINT: &str = "52Pbw9eUXkuMsw1KJKdYtkBEPt94D8RL8Ko29Hrqsb2X";
+pub const CREATOR_SIMPLE_TOKEN_ACCOUNT: &str = "5LEXeqv44X21oCBybV74ZTQCVKLtX1iL5474gSUjWwrx";
 pub const PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT: u64 = 415420420696969666;
 
 #[error_code]
@@ -26,7 +26,7 @@ pub enum SimpleProtocolError {
 pub mod simple_protocol {
     use {
         super::*,
-        anchor_lang::{prelude::Context, solana_program::native_token::LAMPORTS_PER_SOL},
+        anchor_lang::prelude::Context,
         anchor_spl::token::{transfer, Transfer},
     };
 
@@ -56,9 +56,7 @@ pub mod simple_protocol {
     }
 
     pub fn execute(ctx: Context<Execute>) -> Result<()> {
-        let user = &mut ctx.accounts.user;
-
-        msg!("user {} ({})", user.key(), user.to_account_info().owner,);
+        let _user = &mut ctx.accounts.user;
 
         let percent_tracker = &mut ctx.accounts.percent_tracker;
         let wsol_balance = &mut ctx.accounts.wsol_balance;
@@ -82,66 +80,6 @@ pub mod simple_protocol {
         let total_drainable_simple =
             program_simple_token_account.amount as f64 * percent_tracker.increment as f64 / 100.0;
 
-        msg!(
-            "percent_tracker {} ({}): {}%",
-            percent_tracker.key(),
-            percent_tracker.to_account_info().owner,
-            percent_tracker.increment
-        );
-
-        msg!(
-            "wsol_balance {} ({}): {} WSOL",
-            wsol_balance.key(),
-            wsol_balance.to_account_info().owner,
-            wsol_balance.amount / LAMPORTS_PER_SOL
-        );
-
-        msg!(
-            "raydium_pool_wsol_token_account {} ({}): {} WSOL",
-            raydium_pool_wsol_token_account.key(),
-            raydium_pool_wsol_token_account.to_account_info().owner,
-            raydium_pool_wsol_token_account.amount / LAMPORTS_PER_SOL
-        );
-
-        msg!(
-            "transfer_authority {} ({})",
-            transfer_authority.key(),
-            transfer_authority.to_account_info().owner
-        );
-
-        msg!(
-            "program_simple_account {} ({}): {} simple",
-            program_simple_token_account.key(),
-            program_simple_token_account.to_account_info().owner,
-            program_simple_token_account.amount / LAMPORTS_PER_SOL
-        );
-
-        msg!(
-            "total_drainable_simple {} simple",
-            total_drainable_simple / LAMPORTS_PER_SOL as f64
-        );
-
-        msg!(
-            "There can't be less than {} - {} = {} simple in pool",
-            PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT as f64 / LAMPORTS_PER_SOL as f64,
-            total_drainable_simple / LAMPORTS_PER_SOL as f64,
-            PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT as f64 / LAMPORTS_PER_SOL as f64
-                - total_drainable_simple / LAMPORTS_PER_SOL as f64
-        );
-
-        msg!(
-            "user_claim_tracker {} ({}): {}",
-            user_claim_tracker.key(),
-            user_claim_tracker.to_account_info().owner,
-            user_claim_tracker.increment
-        );
-
-        msg!(
-            "user_simple_ata {} ({}): {} simple",
-            user_simple_token_account.key(),
-            user_simple_token_account.to_account_info().owner,
-            user_simple_token_account.amount / LAMPORTS_PER_SOL
-        );
         if **user_claim_tracker.to_account_info().lamports.borrow() == 0
             || **user_simple_token_account
                 .to_account_info()
@@ -153,7 +91,6 @@ pub mod simple_protocol {
             return Err(SimpleProtocolError::UninitializedAccount.into());
         } else if user_raydium_lp_ata.amount == 0 {
             return Err(SimpleProtocolError::ZeroLpTokens.into());
-
         } else if (program_simple_token_account.amount as f64)
             < (PROGRAM_SIMPLE_TOKEN_ACCOUNT_INITIAL_AMOUNT as f64 - total_drainable_simple)
         {
@@ -168,10 +105,10 @@ pub mod simple_protocol {
                 let user_claim_percent = percent_tracker.increment - user_claim_tracker.increment;
                 let user_lp_ratio =
                     user_raydium_lp_ata.amount as f64 / raydium_lp_mint.supply as f64;
-                let user_drainable_simple = program_simple_token_account.amount as f64 * user_claim_percent as f64 / 100.0;
+                let user_drainable_simple =
+                    program_simple_token_account.amount as f64 * user_claim_percent as f64 / 100.0;
 
-                let user_share =
-                    user_drainable_simple * user_lp_ratio;
+                let user_share = user_drainable_simple * user_lp_ratio;
 
                 let simple_share = user_share / 100.0;
 
@@ -204,42 +141,6 @@ pub mod simple_protocol {
                 )?;
 
                 user_claim_tracker.increment = percent_tracker.increment;
-
-                msg!(
-                    "user_raydium_lp_ata {} ({}): {} Raydium LP",
-                    user_raydium_lp_ata.key(),
-                    user_raydium_lp_ata.owner,
-                    user_raydium_lp_ata.amount / LAMPORTS_PER_SOL
-                );
-                msg!(
-                    "raydium_lp_mint {} ({}): {} Raydium LP Supply",
-                    raydium_lp_mint.key(),
-                    raydium_lp_mint.to_account_info().owner,
-                    raydium_lp_mint.supply / LAMPORTS_PER_SOL
-                );
-
-                msg!(
-                    "user_drainable_simple {} simple",
-                    user_drainable_simple / LAMPORTS_PER_SOL as f64,
-                );
-                msg!(
-                    "user gets {} of {} simple",
-                    user_lp_ratio,
-                    user_drainable_simple / LAMPORTS_PER_SOL as f64,
-                );
-
-                msg!(
-                    "full user_share: {} simple",
-                    user_share / LAMPORTS_PER_SOL as f64
-                );
-                msg!(
-                    "real_user_share: {} simple",
-                    real_user_share / LAMPORTS_PER_SOL as f64
-                );
-                msg!(
-                    "simple_share: {} simple",
-                    simple_share / LAMPORTS_PER_SOL as f64
-                )
             }
         }
 
